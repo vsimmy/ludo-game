@@ -1,0 +1,73 @@
+.slot-container {
+  margin-bottom: 10px;
+}
+
+.slot-veritcal-container {
+  height: 12px;
+  width: 24px;
+  border: 2px solid black;
+  background-color: brown;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  rotate: 90deg;
+}
+
+.empty-slot-container {
+  height: 12px;
+  width: 24px;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  rotate: 90deg;
+}
+
+.slot-finish-container {
+  height: 12px;
+  width: 12px;
+  border: 2px solid black;
+  background-color: brown;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  rotate: 90deg;
+}
+
+.slot-horizontal-container {
+  height: 12px;
+  width: 24px;
+  border: 2px solid black;
+  background-color: brown;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.slot-rectangle {
+  height: 80 px;
+  width: 8px;
+  background-color: white;
+  border-radius: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot-triangle {
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  rotate: 180deg;
+}

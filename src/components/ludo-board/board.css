@@ -1,0 +1,35 @@
+.board {
+  width: 32vw;
+  height: 64vh;
+  border: 2px solid;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.adjacent-stations {
+  display: flex;
+  justify-content: space-between;
+}
+.path-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#red {
+  background-color: red;
+}
+
+#blue {
+  background-color: blue;
+}
+
+#green {
+  background-color: green;
+}
+
+#yellow {
+  background-color: yellow;
+}

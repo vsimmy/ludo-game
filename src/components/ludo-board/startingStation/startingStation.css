@@ -1,0 +1,13 @@
+.station {
+  height: 100%;
+  display: grid;
+
+  grid-template-rows: 50% 50%;
+  grid-template-columns: 50% 50%;
+  box-sizing: content-box;
+}
+
+.adjacent-spots {
+  display: flex;
+  justify-content: space-between;
+}
