@@ -21,8 +21,8 @@ const Slot = ({ key, type }) => {
           type === "empty"
             ? "empty-slot-container"
             : type === "square-finish"
-            ? "slot-horizontal-container"
-            : "slot-veritcal-container"
+            ? "slot-vertical-container"
+            : "slot-horizontal-container"
         }
         key={key}
       >
