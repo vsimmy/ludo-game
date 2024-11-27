@@ -1,3 +1,7 @@
+.starting-station-container {
+  display: flex;
+}
+
 .station {
   height: 100%;
   display: grid;
@@ -10,4 +14,25 @@
 .adjacent-spots {
   display: flex;
   justify-content: space-between;
+}
+
+#red-starting {
+  flex-direction: column-reverse;
+  align-items: end;
+}
+
+#blue-starting {
+  flex-direction: column;
+  justify-content: start;
+}
+
+#yellow-starting {
+
+  flex-direction: column-reverse;
+  justify-content: start;
+}
+
+#green-starting {
+  flex-direction: column;
+  align-items: end;
 }

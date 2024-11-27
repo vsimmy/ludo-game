@@ -1,7 +1,10 @@
+import Piece from "../../piece/piece";
 import "./station.css";
 
-const Station = () => {
-  return <div className="startingSpot">P</div>;
+const Station = ({ pieceColor }) => {
+  return <div className="startingSpot">
+    <Piece pieceColor={pieceColor} />
+  </div>;
 };
 
 export default Station;
