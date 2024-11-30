@@ -1,6 +1,6 @@
 import { useState } from "react";
 const Dice = ({ onRoll }) => {
-    const [roll, setRoll] = useState(0);
+    const [roll, setRoll] = useState(1);
 
     const handleRoll = () => {
         const randomRoll = Math.floor(Math.random() * 6) + 1;

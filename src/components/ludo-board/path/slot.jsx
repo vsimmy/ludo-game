@@ -1,6 +1,6 @@
 import "./slot.css";
 
-const Slot = ({ key, type, rotate, color, isOccupied }) => {
+const Slot = ({ id, type, rotate, color, isOccupied }) => {
 
   function SlotOutput(type) {
     return "slot-" + type + "-container"
@@ -10,7 +10,7 @@ const Slot = ({ key, type, rotate, color, isOccupied }) => {
   return (
     <div className="slot-container">
       <div className={SlotOutput(type)}
-        key={key}
+        id={id}
         style={{ rotate: rotate, backgroundColor: color }}
       >
         <div className="slot-circle">
@@ -20,6 +20,5 @@ const Slot = ({ key, type, rotate, color, isOccupied }) => {
     </div>
   );
 };
-//change traiangle to container level
 
 export default Slot;

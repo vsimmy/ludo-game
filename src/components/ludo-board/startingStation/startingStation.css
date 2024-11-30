@@ -11,6 +11,21 @@
   box-sizing: content-box;
 }
 
+.starting-slot {
+  display: flex;
+}
+
+.start-spot {
+  height: 24px;
+  width: 24px;
+  background-color: white;
+  border-radius: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.36em;
+}
+
 .adjacent-spots {
   display: flex;
   justify-content: space-between;
@@ -35,4 +50,8 @@
 #green-starting {
   flex-direction: column;
   align-items: end;
+}
+
+.piece {
+  cursor: pointer;
 }

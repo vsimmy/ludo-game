@@ -1,10 +1,11 @@
 import { useState } from "react";
 import "./path.css";
-
+import Piece from "../../piece/piece";
 import Slot from "./slot";
 
 
 const Path = ({ length }) => {
+
   // type(j,e,r,t,s)-rotate(50/0,25,50,75)-color(g,r,y,b)-isOccupied(1,0)
   const firstRow = ['', '', '', 't-25-b', 'r-50-g', 'r-50-r', 's-0-y', 'r-50-b', 'r-50-g', 't-50-r', '', '', ''];
   const secondRow = ['', '', '', 'r-0-y', '', '', 's-0-y', '', '', 'r-0-y', '', '', ''];
@@ -35,6 +36,7 @@ const Path = ({ length }) => {
     twelvethRow,
     thirteenthRow
   ];
+  //TODO: use slots here to set position per turn, including start slot e.g. include started boolean for pieces on starting platform
   const [slots, setSlots] = useState(startBoard);
   function parseSlot(codeString) {
     const code = codeString.split('-')
@@ -67,6 +69,7 @@ const Path = ({ length }) => {
       {startBoard.map((row, rowIndex) => (
         <div
           key={rowIndex}
+          id={rowIndex}
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -75,11 +78,14 @@ const Path = ({ length }) => {
         >
           {row.map((slot, slotIndex) => {
             return <Slot
-              key={`${rowIndex}-${slotIndex}`}
+              key={rowIndex * length + slotIndex + 1}
+              id={rowIndex * length + slotIndex + 1}
               type={parseSlot(slot).type}
               rotate={parseSlot(slot).rotate}
               color={parseSlot(slot).color}
-              isOccupied={parseSlot(slot).isOccupied} />;
+              isOccupied={parseSlot(slot).isOccupied}>
+              <Piece />
+            </Slot>;
           }
           )}
         </div>
