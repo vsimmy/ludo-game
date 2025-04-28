@@ -6,3 +6,4 @@ export const PieceColor = {
     YELLOW: 'yellow'
 
 }
+export const ColorsDict = { 'b': 'blue', 'g': 'green', 'y': 'yellow', 'r': 'red', '': 'transparent' }

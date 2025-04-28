@@ -1,15 +1,14 @@
-import { useState } from "react";
+
 const Dice = ({ onRoll }) => {
-    const [roll, setRoll] = useState(1);
+
 
     const handleRoll = () => {
         const randomRoll = Math.floor(Math.random() * 6) + 1;
-        setRoll(randomRoll);
-        onRoll(roll);
+        onRoll(randomRoll);
     }
     return (
         <div>
-            <p>Roll: {roll}</p>
+
             <button onClick={handleRoll}>Roll the Dice</button>
         </div>
     );

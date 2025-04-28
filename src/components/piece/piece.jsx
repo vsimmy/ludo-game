@@ -1,10 +1,8 @@
-import { useState } from "react";
 
 const Piece = ({ pieceColor, id, onClickPiece, position }) => {
-  const [currentPosition, setCurrentPosition] = useState(0)
+
   const handleClick = () => {
-    setCurrentPosition(position)
-    console.log(position)
+    console.log(id, pieceColor, position)
     onClickPiece(id, pieceColor, position);
   }
 
