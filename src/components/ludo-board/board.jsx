@@ -73,6 +73,7 @@ const Board = () => {
     twelvethRow,
     thirteenthRow
   ];
+  const startSlots = Array.from({ length: 4 }, (_, index) => index * length - 1)
   const [pathCode, setPathCode] = useState(startBoard) //TODO: each turn pathcode is rotated and finish path is reset
   function parseSlot(codeString) {
     const code = codeString.split('-')
@@ -81,7 +82,7 @@ const Board = () => {
       type: parseSlotType(code[0]),
       rotate: (fraction * 360).toString() + 'deg',
       color: parseSlotColor(code.length > 0 ? code[2] : ''),
-      slotNum: code.length > 3 ? code[3] : null
+      slotNum: code.length > 3 ? code[3] * 1 : null
     }
   }
   function parseSlotType(code) {
@@ -115,7 +116,7 @@ const Board = () => {
       newPositions[currentColor][pieceId] =
         position === null ?
           (currentRoll % 2 === 0 ? 0 : null)
-          : piecePositions[currentColor][pieceId] + currentRoll
+          : piecePositions[currentColor][pieceId] + currentRoll + (position === 0) * startSlots[Object.values(PieceColor).indexOf(currentColor)]
       setPiecePositions(newPositions)
       console.log(newPositions)
     }
@@ -183,6 +184,10 @@ const Board = () => {
   }
 
   const renderPath = () => {
+    pathCode.map((row, rowIndex) => (row.map((slot, slotIndex) => (Object.keys(piecePositions).map(c => (piecePositions[c].map((piecePos, pieceInd) => {
+      if (String(piecePos) === String(parseSlot(slot).slotNum) && piecePos !== null) console.log(piecePos, parseSlot(slot).slotNum)
+    })))))))
+
     return <div style={{ display: "flex", flexDirection: "column", margin: "0" }}>
       {pathCode.map((row, rowIndex) => (
         <div
@@ -195,16 +200,6 @@ const Board = () => {
           }}
         >
           {row.map((slot, slotIndex) => (
-            //   <Slot
-            //   key={rowIndex * length + slotIndex + 1}
-            //   id={parseSlot(slot).slotNum}
-            //   type={parseSlot(slot).type}
-            //   rotate={parseSlot(slot).rotate}
-            //   color={parseSlot(slot).color}
-            //   piece={getPiece(parseSlot(slot).slotNum, handlePieceSelect)}>
-
-            // </Slot>
-
             <div className="slot-container" key={rowIndex * length + slotIndex}>
               <div className={SlotOutput(parseSlot(slot).type)}
                 id={parseSlot(slot).slotNum}
