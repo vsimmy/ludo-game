@@ -1,6 +1,5 @@
 import StartingStation from "./startingStation/startingStation";
 import "./board.css";
-import Slot from "./path/slot";
 import { useState } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
@@ -24,23 +23,7 @@ const Board = () => {
   const [selectedPiece, setSelectedPiece] = useState(null)
 
   const length = 13
-  const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
-  const handlePieceSelect = (id, color, position) => {
-    console.log(color, id, position)
-    if (currentColor === color && hasPieceSelected === false) {
-      setHasPieceSelected(!hasPieceSelected)
-      console.log(currentColor)
-      let currentPosition = piecePositions
-      let pieceId = id.split('-')[1] - 1
-      currentPosition[currentColor][pieceId] =
-        position === null ?
-          (currentRoll % 2 === 0 ? 0 : null)
-          : currentPosition[currentColor][pieceId] + currentRoll
-      setPiecePositions(currentPosition)
-    }
-    setHasPieceSelected(false)
 
-  }
 
 
   const getPiece = (slotNum, onPieceSelect) => {
@@ -121,28 +104,48 @@ const Board = () => {
   // TODO: 2. slot stores occupied piece identifier
   //TODO: 3. winning condition  - 
   //TODO: 4.jumps - same color and long jump slots (including if killing over finishing line)
+  const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
+  const handlePieceSelect = (id, color, position) => {
+    console.log("Piece selected:", { id, color, position, currentColor, currentRoll });
+    if (currentColor === color && hasPieceSelected === false) {
+      setHasPieceSelected(true)
 
+      const newPositions = JSON.parse(JSON.stringify(piecePositions))
+      let pieceId = id.split('-')[1] - 1
+      newPositions[currentColor][pieceId] =
+        position === null ?
+          (currentRoll % 2 === 0 ? 0 : null)
+          : piecePositions[currentColor][pieceId] + currentRoll
+      setPiecePositions(newPositions)
+      console.log(newPositions)
+    }
+    setHasPieceSelected(false)
+
+  }
   const handleRoll = () => {
-
+    const nextTurnInd = currentTurnInd === -1 ? 0 : (currentTurnInd + 1) % 4;
+    setCurrentTurnInd(nextTurnInd)
     const randomRoll = Math.floor(Math.random() * 6) + 1;
     const newRoundNum = round + 1;
-    const nextPlayer = randomRoll !== 6 ? (currentTurnInd === -1 ? 0 : (currentTurnInd + 1) % 4) : currentTurnInd;
 
-    if (randomRoll !== 6) {
-      setSixRoll(0);
-      setCurrentTurnInd(nextPlayer)
-    }
+    // when 6 it should delay turnInd
+
     if (randomRoll === 6) {
       if (sixRoll < 3) {
         setSixRoll(sixRoll => sixRoll + 1);
+        setCurrentTurnInd(currentTurnInd)
       } else {
 
         //setToHome(true);
         setSixRoll(0);
       }
     }
+    if (randomRoll !== 6) {
+      setSixRoll(0);
 
-    const displayColor = Object.values(PieceColor)[nextPlayer]
+    }
+    console.log(Object.values(PieceColor)[currentTurnInd], Object.values(PieceColor)[nextTurnInd])
+    const displayColor = Object.values(PieceColor)[randomRoll === 6 ? currentTurnInd : nextTurnInd]
     const newTurnDisplay = getDisplay(newRoundNum, displayColor, randomRoll);
     const newGameLogEntry = {
       currentRound: newRoundNum,
@@ -154,8 +157,8 @@ const Board = () => {
     setGameLog([...gameLog, newGameLogEntry])
 
 
-    setCurrentRoll(randomRoll);
-    setRoundDisplay(newTurnDisplay);
+
+    setRoundDisplay(newTurnDisplay); setCurrentRoll(randomRoll);
     setRound(newRoundNum)
   }
 
@@ -174,6 +177,11 @@ const Board = () => {
     setShowGameLog(!showGameLog);
   };
 
+  function SlotOutput(type) {
+    return "slot-" + type + "-container"
+
+  }
+
   const renderPath = () => {
     return <div style={{ display: "flex", flexDirection: "column", margin: "0" }}>
       {pathCode.map((row, rowIndex) => (
@@ -186,19 +194,46 @@ const Board = () => {
             margin: "0",
           }}
         >
-          {row.map((slot, slotIndex) => (<Slot
-            key={rowIndex * length + slotIndex + 1}
-            id={parseSlot(slot).slotNum}
-            type={parseSlot(slot).type}
-            rotate={parseSlot(slot).rotate}
-            color={parseSlot(slot).color}
-            piece={getPiece(parseSlot(slot).slotNum, handlePieceSelect)}>
+          {row.map((slot, slotIndex) => (
+            //   <Slot
+            //   key={rowIndex * length + slotIndex + 1}
+            //   id={parseSlot(slot).slotNum}
+            //   type={parseSlot(slot).type}
+            //   rotate={parseSlot(slot).rotate}
+            //   color={parseSlot(slot).color}
+            //   piece={getPiece(parseSlot(slot).slotNum, handlePieceSelect)}>
 
-          </Slot>)
+            // </Slot>
+
+            <div className="slot-container" key={rowIndex * length + slotIndex}>
+              <div className={SlotOutput(parseSlot(slot).type)}
+                id={parseSlot(slot).slotNum}
+                style={{ rotate: parseSlot(slot).rotate, backgroundColor: parseSlot(slot).color }}
+              >
+                <div className="slot-circle" >
+
+                  {Object.keys(piecePositions).map(c => (piecePositions[c].map((piecePos, pieceInd) => {
+
+                    if (String(piecePos) === String(parseSlot(slot).slotNum) && piecePos !== null) {
+                      const pieceId = `${c}-${pieceInd + 1}`
+                      return (<div id={pieceId} key={pieceId} onClick={() => handlePieceSelect(pieceId, c, piecePos)} >
+                        <svg xmlns="https://www.w3.org/2000/svg" height='16' width='16' viewBox="0 0 48 56" >
+                          <path fill={c} d="M 49.5,21.5 C 49.5,23.5 49.5,25.5 49.5,27.5C 48.7109,27.7828 48.0442,28.2828 47.5,29C 41.5,29.3333 35.5,29.6667 29.5,30C 24.9271,35.15 20.5938,40.4833 16.5,46C 14.5273,46.4955 12.5273,46.6621 10.5,46.5C 11.8622,40.7669 13.5289,35.1002 15.5,29.5C 12.4281,29.1826 9.42814,29.5159 6.5,30.5C 5.52679,34.1477 3.19345,35.8143 -0.5,35.5C -0.5,33.1667 -0.5,30.8333 -0.5,28.5C 0.833333,25.8333 0.833333,23.1667 -0.5,20.5C -0.5,18.1667 -0.5,15.8333 -0.5,13.5C 3.19345,13.1857 5.52679,14.8523 6.5,18.5C 9.42814,19.4841 12.4281,19.8174 15.5,19.5C 13.5289,13.8998 11.8622,8.23313 10.5,2.5C 12.5273,2.33788 14.5273,2.50454 16.5,3C 20.5938,8.51671 24.9271,13.85 29.5,19C 35.5,19.3333 41.5,19.6667 47.5,20C 48.0442,20.7172 48.7109,21.2172 49.5,21.5 Z" />
+                        </svg>
+
+                      </div>)
+                    } else {
+                      return null
+                    }
+                  })))}
+                </div>
+              </div>
+            </div>
+          )
           )}
         </div>
       ))}
-    </div>
+    </div >
   }
 
   /// TODO: MASTER - select piece based on number rolled and it should move, abstract six roll logic and isMoveLegal and how the piece goes from home to station to path
