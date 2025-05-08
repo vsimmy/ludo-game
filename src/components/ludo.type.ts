@@ -3,7 +3,7 @@ export const PieceColor = {
     BLUE: 'blue',
     GREEN: 'green',
     RED: 'red',
-    YELLOW: 'yellow'
+    ORANGE: 'orange'
 
 }
-export const ColorsDict = { 'b': 'blue', 'g': 'green', 'y': 'yellow', 'r': 'red', '': 'transparent' }
+export const ColorsDict = { 'b': PieceColor.BLUE, 'g': PieceColor.GREEN, 'y': PieceColor.ORANGE, 'r': PieceColor.RED, '': 'transparent' }

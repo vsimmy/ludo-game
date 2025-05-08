@@ -1,16 +1,9 @@
 import "./startingStation.css";
-import { PieceColor } from "../../ludo.type.ts";
 import Piece from "../../piece/piece";
 
 const StartingStation = ({ bgColor, onPieceSelect, positions }) => {
   function styleStartingPosition(bgColor) {
-    switch (bgColor) {
-      case PieceColor.RED: return 'red-starting'
-      case PieceColor.BLUE: return 'blue-starting'
-      case PieceColor.GREEN: return 'green-starting'
-      case PieceColor.YELLOW: return 'yellow-starting'
-      default: return {}
-    }
+    return bgColor + '-starting'
   }
   return (//TODO: move starting platform to path compoonent, null is at station and index 0 for starting platform
     <div className="starting-station-container" key={styleStartingPosition(bgColor)} id={styleStartingPosition(bgColor)}>
