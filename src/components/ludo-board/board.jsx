@@ -6,7 +6,7 @@ import { PieceColor } from "../ludo.type.ts";
 
 const Board = () => {
 
-
+  const numPlayers = 4
   const initPositions = Object.values(PieceColor).reduce((acc, key) => {
     acc[key] = [null, null, null, null]
     return acc
@@ -20,22 +20,23 @@ const Board = () => {
   const [sixRoll, setSixRoll] = useState(0);
   const [piecePositions, setPiecePositions] = useState(initPositions);
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
+  const [goHome, setGoHome] = useState(false);
 
   const length = 13
-  const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 's-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
-  const secondRow = ['', '', '', 'r-0-y-30', '', '', 's-0-y', '', '', 'r-0-y-38', '', '', ''];
-  const thirdRow = ['', '', '', 'r-0-r-29', '', '', 's-0-y', '', '', 'r-0-b-39', '', '', ''];
-  const fourthRow = ['t-25-g-25', 'r-50-r-26', 'r-50-y-27', 'p-0-g-28', 'j-0-g', 'j-0-g', 's-0-y', 'j-0-g', 'j-0-g', 'p-0-r-40', 'r-50-y-41', 'r-50-b-42', 't-50-g-43'];
-  const fifthRow = ['r-0-b-24', '', '', 'j-50-b', '', '', 's-0-y', '', '', 'j-50-r', '', '', 'r-0-r-44'];
-  const sixthRow = ['r-0-y-23', '', '', 'j-50-b', '', '', 's-0-y', '', '', 'j-50-r', '', '', 'r-0-y-45'];
-  const seventhRow = ['r-0-r-22', 's-0-r', 's-0-r', 's-0-r', 's-0-r', 's-0-r', 's-0-r', 's-0-b', 's-0-b', 's-0-b', 's-0-b', 's-0-b', 's-0-b', 'r-0-b-46'];
+  const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
+  const secondRow = ['', '', '', 'r-0-y-30', '', '', 's-0-y-1', '', '', 'r-0-y-38', '', '', ''];
+  const thirdRow = ['', '', '', 'r-0-r-29', '', '', 's-0-y-2', '', '', 'r-0-b-39', '', '', ''];
+  const fourthRow = ['t-25-g-25', 'r-50-r-26', 'r-50-y-27', 'p-0-g-28', 'j-0-g', 'j-0-g', 's-0-y-3', 'j-0-g', 'j-0-g', 'p-0-r-40', 'r-50-y-41', 'r-50-b-42', 't-50-g-43'];
+  const fifthRow = ['r-0-b-24', '', '', 'j-50-b', '', '', 's-0-y-4', '', '', 'j-50-r', '', '', 'r-0-r-44'];
+  const sixthRow = ['r-0-y-23', '', '', 'j-50-b', '', '', 's-0-y-5', '', '', 'j-50-r', '', '', 'r-0-y-45'];
+  const seventhRow = ['r-0-r-22', 's-0-r-1', 's-0-r-2', 's-0-r-3', 's-0-r-4', 's-0-r-5', '', '', 's-0-b-5', 's-0-b-4', 's-0-b-3', 's-0-b-2', 's-0-b-1', 'r-0-b-46'];
 
-  const eighthRow = ['r-0-g-21', '', '', 'j-50-b', '', '', 's-0-g', '', '', 'j-50-r', '', '', 'r-0-g-47'];
-  const ninthRow = ['r-0-b-20', '', '', 'j-50-b', '', '', 's-0-g', '', '', 'j-50-r', '', '', 'r-0-r-48'];
-  const tenthRow = ['t-0-y-19', 'r-50-r-18', 'r-50-g-17', 'p-0-b-16', 'j-0-y', 'j-0-y', 's-0-g', 'j-0-y', 'j-0-y', 'p-0-y-4', 'r-50-g-3', 'r-50-b-2', 't-75-y-1'];
-  const eleventhRow = ['', '', '', 'r-0-r-15', '', '', 's-0-g', '', '', 'r-0-b-5', '', '', ''];
-  const twelvethRow = ['', '', '', 'r-0-g-14', '', '', 's-0-g', '', '', 'r-0-g-6', '', '', '']
-  const thirteenthRow = ['', '', '', 't-0-b-13', 'r-50-y-12', 'r-50-r-11', 's-0-g-10', 'r-50-b-9', 'r-50-y-8', 't-75-r-7', '', '', ''];
+  const eighthRow = ['r-0-g-21', '', '', 'j-50-b', '', '', 's-0-g-5', '', '', 'j-50-r', '', '', 'r-0-g-47'];
+  const ninthRow = ['r-0-b-20', '', '', 'j-50-b', '', '', 's-0-g-4', '', '', 'j-50-r', '', '', 'r-0-r-48'];
+  const tenthRow = ['t-0-y-19', 'r-50-r-18', 'r-50-g-17', 'p-0-b-16', 'j-0-y', 'j-0-y', 's-0-g-3', 'j-0-y', 'j-0-y', 'p-0-y-4', 'r-50-g-3', 'r-50-b-2', 't-75-y-1'];
+  const eleventhRow = ['', '', '', 'r-0-r-15', '', '', 's-0-g-2', '', '', 'r-0-b-5', '', '', ''];
+  const twelvethRow = ['', '', '', 'r-0-g-14', '', '', 's-0-g-1', '', '', 'r-0-g-6', '', '', '']
+  const thirteenthRow = ['', '', '', 't-0-b-13', 'r-50-y-12', 'r-50-r-11', 'r-0-g-10', 'r-50-b-9', 'r-50-y-8', 't-75-r-7', '', '', ''];
   const startBoard = [
     firstRow,
     secondRow,
@@ -51,11 +52,12 @@ const Board = () => {
     twelvethRow,
     thirteenthRow
   ];
-  const startSlots = Array.from({ length: 4 }, (_, index) => Math.max(index * (length - 1), 0))
+
   const terminalSlots = Object.keys(PieceColor).reduce((slotObj, color, index) => {
-    slotObj[PieceColor[color]] = { startSlot: index * (length - 1), endSlot: (4 - index) * (length - 1) - 2 }
+    slotObj[PieceColor[color]] = { startSlot: index * (length - 1), endSlot: index * (length - 1) === 0 ? (length - 1) * numPlayers : (index * (length - 1)) % ((length - 1) * numPlayers) - 2 }
     return slotObj
-  }, {})
+  }, {}) //FIX green and orange need to swap endslots
+  console.log(terminalSlots)
   // const [pathCode, setPathCode] = useState(startBoard)
   function parseSlot(codeString) {
     const code = codeString.split('-')
@@ -64,7 +66,7 @@ const Board = () => {
       type: parseSlotType(code[0]),
       rotate: (fraction * 360).toString() + 'deg',
       color: parseSlotColor(code.length > 0 ? code[2] : ''),
-      slotNum: code.length > 3 ? code[3] * 1 : null
+      slotNum: code.length > 3 ? (code[0] !== 's' ? code[3] * 1 : code[2] + '-' + code[3]) : null
     }
   }
   function parseSlotType(code) {
@@ -83,39 +85,44 @@ const Board = () => {
       try { return ColorsDict[code] } catch (e) { throw new Error('no such code') }
     }
   }
-  // TODO: fix the rolling 6 logic for display color (currently display colors lags by 1 round) 
   //TODO: when a piece reaches the finsihing lane, it should move to the same index of next array
   // TODO: when a non-same color piece is in the slot, by checking piecePositions, it should replace the other piece's position to null and to an empty slot in starting station
-
+  //TODO: when taking a piece on same color slot, it has a choice to jump or take
+  //TODO: create a jump slot number to terminalSlots object and when piece color lands, it will skip to jumpEndSlot
+  //FIX: optimisation at the end, around round 21+, server will freeze
   const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
   const handlePieceSelect = (id, color, position) => {
     console.log("Piece selected:", { id, color, position, currentColor, currentRoll });
     if (currentColor === color && hasPieceSelected === true) {
+      if (goHome === true) {
+        // findEmpty and go home
+      }
       setHasPieceSelected(false)
-      console.log(color)
-      calculatePiecePositions(piecePositions, currentRoll, id, color, position)
-
-      //TODO: add going up finish lane logic and jump logic
+      calculatePiecePositions(currentRoll, id, color, position)
 
     }
   }
 
-  const calculatePiecePositions = (currentPositions, roll, id, currentColor, piecePosition) => {
-    const newPositions = JSON.parse(JSON.stringify(currentPositions))
-    let pieceId = id.split('-')[1] - 1
+  const calculatePiecePositions = (roll, pId, currentColor, currPosition) => {
+    const newPositions = JSON.parse(JSON.stringify(piecePositions)) // create deep copy
+    let pieceId = pId.split('-')[1] - 1
+    let nextSlot = piecePositions[currentColor][pieceId] + roll
+    const colorShift = (currPosition === 0) * terminalSlots[currentColor].startSlot
     const newPosition =
-      piecePosition === null ?
+      currPosition === null ?
         (roll % 2 === 0 ? 0 : null)
-        : ((piecePositions[currentColor][pieceId] + roll + (piecePosition === 0) * terminalSlots[currentColor].startSlot) % ((length - 1) * 4))
-    console.log('curr : ' + piecePositions[currentColor][pieceId], terminalSlots[currentColor])
-    newPositions[currentColor][pieceId] = calculateJump(newPosition, currentColor) //newPosition >= terminalSlots[currentColor].endSlot ? calculateFinish() :
+        : Math.min((nextSlot % ((length - 1) * numPlayers) === 0 ? (length - 1) * numPlayers : nextSlot % ((length - 1) * numPlayers)), nextSlot) + colorShift
+    console.log(piecePositions[currentColor][pieceId], currPosition, terminalSlots[currentColor])
+    newPositions[currentColor][pieceId] =
+      document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
+        (currPosition !== 0 && currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
+        ? calculateFinish(newPosition, currentColor, pId) // gets next position within finish lane
+        : calculateJump(newPosition, currentColor) // gets next position, if possible also jumps
     console.log(newPosition, newPositions)
     setPiecePositions(newPositions)
 
   }
-  const calculateNextSlot = () => {
 
-  }
   const calculateJump = (piecePosition, pieceColor) => {
     let nextSlotId = piecePosition + 1
     const slotColor = document.getElementById(piecePosition)?.style.backgroundColor
@@ -130,34 +137,62 @@ const Board = () => {
     }
   }
 
-  const calculateFinish = (piecePosition) => {
+  const calculateFinish = (newPiecePosition, pieceColor, pId) => {
+    const hasFinished = document.getElementById(pId).parentElement.parentElement.id === Object.keys(ColorsDict).find(c => ColorsDict[c] === pieceColor) + '-5';
+    console.log(findEmpty(pieceColor))
+    console.log(hasFinished)
+    if (!hasFinished) {
+      const finishSlotMove = newPiecePosition - terminalSlots[pieceColor].endSlot
+      // currPosition is endSlot
+      if (Math.abs(finishSlotMove) > 4) {
+
+      } else {
+        // move within finish lane - finishSlotMove is the new end number of id e.g. if 2 then color-2
+        console.log('already in lane or end slot, so newPiecePosition is within 5')
+        console.log('insert piece into element with finishSlotMove id of the square finish slot')
+      }
+
+    } else {
+      // call findEmpty to insert piece and turn color and cannot be selected again 
+      return null
+    }
+
+  }
+
+  const takePiece = () => {
+
+  }
+  const findEmpty = (color) => {
+    const startSlotElements = document.getElementById(color + '-station').children
+    console.log(startSlotElements)
+    console.log('find id of empty slot for won piece or taken piece in station and insert piece')
 
   }
   const handleRoll = () => {
-    const nextTurnInd = currentTurnInd === -1 ? 0 : ((currentTurnInd + 1) % 4 - (sixRoll > 0)); //TODO: when 6 it stays with prev color, needs to be next
+    const nextTurnInd = Math.max(0, (currentTurnInd + 1 - (sixRoll > 0)) % numPlayers);
     setCurrentTurnInd(nextTurnInd)
     const randomRoll = Math.floor(Math.random() * 6) + 1;
     const newRoundNum = round + 1;
     setHasPieceSelected(true)
-    // when 6 it should delay turnInd
     if (randomRoll === 6) {
       if (sixRoll < 3) {
         setSixRoll(sixRoll => sixRoll + 1);
       } else {
-        //setToHome(true);
+        setGoHome(true)
         setSixRoll(0);
       }
     } else {
       setSixRoll(0);
     }
 
-    const displayColor = Object.values(PieceColor)[(randomRoll === 6) ? currentTurnInd : nextTurnInd]
+    const displayColor = Object.values(PieceColor)[(sixRoll > 0) ? currentTurnInd : nextTurnInd]
     console.log(displayColor, currentTurnInd, nextTurnInd)
     const newTurnDisplay = getDisplay(newRoundNum, displayColor, randomRoll);
     const newGameLogEntry = {
       currentRound: newRoundNum,
       currentRoll: randomRoll,
-      roundDisplay: newTurnDisplay,
+      roundDisplay: newTurnDisplay, //FIX: when rolled 6, the color turn is lagged by one
+      piecePositions: piecePositions, //FIX: currently one behind
       timestamp: new Date().toLocaleTimeString()
     }
 
@@ -175,6 +210,7 @@ const Board = () => {
     setCurrentTurnInd(logEntry.currentTurnInd);
     setCurrentRoll(logEntry.currentRoll);
     setRoundDisplay(logEntry.roundDisplay);
+    setPiecePositions(logEntry.piecePositions)
   };
 
   const toggleLogPanel = () => {
