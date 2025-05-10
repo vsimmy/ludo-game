@@ -54,10 +54,13 @@ const Board = () => {
   ];
 
   const terminalSlots = Object.keys(PieceColor).reduce((slotObj, color, index) => {
-    slotObj[PieceColor[color]] = { startSlot: index * (length - 1), endSlot: index * (length - 1) === 0 ? (length - 1) * numPlayers : (index * (length - 1)) % ((length - 1) * numPlayers) - 2 }
+    slotObj[PieceColor[color]] = {
+      startSlot: index * (length - 1),
+      endSlot: index * (length - 1) === 0 ? (length - 1) * numPlayers : (index * (length - 1)) % ((length - 1) * numPlayers) - 2,
+      jumpSlot: ((index + 1) * (length - 1)) % ((length - 1) * numPlayers) + 4
+    }
     return slotObj
-  }, {}) //FIX green and orange need to swap endslots
-  console.log(terminalSlots)
+  }, {});
   // const [pathCode, setPathCode] = useState(startBoard)
   function parseSlot(codeString) {
     const code = codeString.split('-')
@@ -86,13 +89,12 @@ const Board = () => {
     }
   }
   //TODO: when a piece reaches the finsihing lane, it should move to the same index of next array
-  // TODO: when a non-same color piece is in the slot, by checking piecePositions, it should replace the other piece's position to null and to an empty slot in starting station
   //TODO: when taking a piece on same color slot, it has a choice to jump or take
-  //TODO: create a jump slot number to terminalSlots object and when piece color lands, it will skip to jumpEndSlot
   //FIX: optimisation at the end, around round 21+, server will freeze
   const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
   const handlePieceSelect = (id, color, position) => {
     console.log("Piece selected:", { id, color, position, currentColor, currentRoll });
+    // setTimeout(() => this.setState({ hasPieceSelected: false }), 5000);//FIX add timeout after dice roll
     if (currentColor === color && hasPieceSelected === true) {
       if (goHome === true) {
         // findEmpty and go home
@@ -108,11 +110,13 @@ const Board = () => {
     let pieceId = pId.split('-')[1] - 1
     let nextSlot = piecePositions[currentColor][pieceId] + roll
     const colorShift = (currPosition === 0) * terminalSlots[currentColor].startSlot
+    // new position from roll
     const newPosition =
       currPosition === null ?
         (roll % 2 === 0 ? 0 : null)
         : Math.min((nextSlot % ((length - 1) * numPlayers) === 0 ? (length - 1) * numPlayers : nextSlot % ((length - 1) * numPlayers)), nextSlot) + colorShift
     console.log(piecePositions[currentColor][pieceId], currPosition, terminalSlots[currentColor])
+    // jump or finish lane
     newPositions[currentColor][pieceId] =
       document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
         (currPosition !== 0 && currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
@@ -126,11 +130,27 @@ const Board = () => {
   const calculateJump = (piecePosition, pieceColor) => {
     let nextSlotId = piecePosition + 1
     const slotColor = document.getElementById(piecePosition)?.style.backgroundColor
+
+    const currentSlotCircle = document.getElementById(piecePosition)?.childNodes[0]
+    const piecesInSlot = currentSlotCircle?.childNodes
+    if (piecesInSlot?.length > 0) {
+      const pieceTaken = piecesInSlot[0]
+      console.log(piecesInSlot, pieceTaken)
+      currentSlotCircle.removeChild(pieceTaken)
+      findEmptyStationSlot(pieceTaken)
+
+    }
+
+
     if (slotColor === pieceColor) {
       while (document.getElementById(nextSlotId)?.style.backgroundColor !== slotColor) {
         nextSlotId++;
       }
-      console.log(nextSlotId)
+      // if next jump is on jump slot or on jump slot
+      if (nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot) {
+        nextSlotId += 15
+        nextSlotId %= (length - 1) * numPlayers
+      }
       return nextSlotId
     } else {
       return piecePosition
@@ -139,7 +159,7 @@ const Board = () => {
 
   const calculateFinish = (newPiecePosition, pieceColor, pId) => {
     const hasFinished = document.getElementById(pId).parentElement.parentElement.id === Object.keys(ColorsDict).find(c => ColorsDict[c] === pieceColor) + '-5';
-    console.log(findEmpty(pieceColor))
+
     console.log(hasFinished)
     if (!hasFinished) {
       const finishSlotMove = newPiecePosition - terminalSlots[pieceColor].endSlot
@@ -159,14 +179,15 @@ const Board = () => {
 
   }
 
-  const takePiece = () => {
 
-  }
-  const findEmpty = (color) => {
-    const startSlotElements = document.getElementById(color + '-station').children
-    console.log(startSlotElements)
-    console.log('find id of empty slot for won piece or taken piece in station and insert piece')
-
+  const findEmptyStationSlot = (pieceElement) => {
+    const startSlotElements = document.getElementById(pieceElement.id.split('-')[0] + '-station').children
+    for (let element of startSlotElements) {
+      if (element.childNodes.length === 0) {
+        element.appendChild(pieceElement)
+        return
+      }
+    }
   }
   const handleRoll = () => {
     const nextTurnInd = Math.max(0, (currentTurnInd + 1 - (sixRoll > 0)) % numPlayers);
@@ -191,8 +212,8 @@ const Board = () => {
     const newGameLogEntry = {
       currentRound: newRoundNum,
       currentRoll: randomRoll,
-      roundDisplay: newTurnDisplay, //FIX: when rolled 6, the color turn is lagged by one
-      piecePositions: piecePositions, //FIX: currently one behind
+      roundDisplay: newTurnDisplay,
+      piecePositions: piecePositions,
       timestamp: new Date().toLocaleTimeString()
     }
 
