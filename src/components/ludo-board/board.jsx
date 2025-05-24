@@ -1,6 +1,6 @@
 import StartingStation from "./startingStation/startingStation";
 import "./board.css";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
 
@@ -21,6 +21,7 @@ const Board = () => {
   const [piecePositions, setPiecePositions] = useState(initPositions);
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
   const [goHome, setGoHome] = useState(false);
+  const [pieceTaken, setPieceTaken] = useState({ color: null, pieceIndex: null })
 
   const length = 13
   const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
@@ -94,15 +95,11 @@ const Board = () => {
   //FIX: optimisation at the end, around round 21+, server will freeze
   const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
   const handlePieceSelect = (id, color, position) => {
-    console.log("Piece selected:", { id, color, position, currentColor, currentRoll });
+    console.log("Piece selected:", { id, color, position, currentColor, currentRoll, hasPieceSelected });
+
     // setTimeout(() => this.setState({ hasPieceSelected: false }), 5000);//FIX add timeout after dice roll
     if (currentColor === color && hasPieceSelected === true) {
-      if (goHome === true) {
-        // findEmpty and go home
-        console.log(goHome)
-        findEmptyStationSlot(document.getElementById(id));
-        setGoHome(false);
-      }
+
       //TODO: misclick an immovable piece or if piece has finished
       if (validPieceClick(position)) {
         setHasPieceSelected(false)
@@ -116,33 +113,43 @@ const Board = () => {
   const calculatePiecePositions = (roll, pId, currentColor, currPosition) => {
     const newPositions = JSON.parse(JSON.stringify(piecePositions)) // create deep copy
     let pieceId = pId.split('-')[1] - 1
-    let nextSlot = piecePositions[currentColor][pieceId]
-    console.log(nextSlot)
+    let currSlot = piecePositions[currentColor][pieceId]
+    console.log(currSlot)
+
+    if (goHome === true) {
+      // findEmpty and go home
+      console.log(goHome)
+      newPositions[currentColor][pieceId] = null
+      setGoHome(false);
+    }
     // piecePosition on finsih land will have prefix color-
-    if (nextSlot !== null && nextSlot.toString().includes('-')) {
-      newPositions[currentColor][pieceId] = convertColorCode(currentColor) + '-' + calculateFinish(nextSlot.split('-')[1] * 1, currentColor, pId, true)
+    if (currSlot !== null && currSlot.toString().includes('-')) {
+      newPositions[currentColor][pieceId] = convertColorCode(currentColor) + '-' + calculateFinish(currSlot.split('-')[1] * 1, currentColor, pId, true)
     } else {
-      nextSlot += roll
+      currSlot += roll
       const colorShift = (currPosition === 0) * terminalSlots[currentColor].startSlot
+      const maxSlot = (length - 1) * numPlayers
       // new position from roll
       const newPosition =
         currPosition === null ?
           (roll % 2 === 0 ? 0 : null)
-          : Math.min((nextSlot % ((length - 1) * numPlayers) === 0 ? (length - 1) * numPlayers : nextSlot % ((length - 1) * numPlayers)), nextSlot) + colorShift
+          : Math.min((currSlot % (maxSlot) === 0 ? maxSlot : currSlot % maxSlot), currSlot) + colorShift
       console.log(currPosition, newPosition, terminalSlots[currentColor])
       //TODO: add piece take here, avoid DOM manipulation and use React State
       // jump or finish lane
-      const pieceToTake = takePiece(newPosition)
+      const slotColor = document.getElementById(newPosition)?.style.backgroundColor
+      const pieceToTake = canTakePiece(newPosition)
       if (pieceToTake) {
-
+        console.log('home')
+        newPositions[currentColor][pieceId] = newPosition
+        newPositions[pieceToTake.color][pieceToTake.pieceIndex] = null
       } else {
         newPositions[currentColor][pieceId] =
           document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
             (currPosition !== 0 && currPosition <= terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
             ? calculateFinish(newPosition, currentColor, pId, false) // gets next position within finish lane
-            : calculateJump(newPosition, currentColor) // gets next position, if possible also jumps
+            : (slotColor === currentColor ? calculateJump(newPosition, currentColor) : newPosition) // gets next position, if possible also jumps
       }
-
       console.log(newPosition, newPositions)
     }
     console.log(newPositions)
@@ -151,59 +158,26 @@ const Board = () => {
   }
 
   const calculateJump = (piecePosition, pieceColor) => {
-    const slotColor = document.getElementById(piecePosition)?.style.backgroundColor
-
-    if (slotColor === pieceColor) {
-      let nextSlotId = piecePosition + 1
-      while (document.getElementById(nextSlotId)?.style.backgroundColor !== slotColor) {
-        nextSlotId++;
-      }
-
-      // if next jump is on jump slot or on jump slot
-      if ((nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot)
-
-      ) {
-        nextSlotId += 15
-        nextSlotId %= (length - 1) * numPlayers
-        // pieceTaken(nextSlotId)
-      }
-      return nextSlotId
-    } else {
-      return piecePosition
+    console.log('jump')
+    let nextSlotId = piecePosition + 1
+    while (document.getElementById(nextSlotId)?.style.backgroundColor !== pieceColor) {
+      nextSlotId++;
     }
-
-  }
-
-  const takePiece = (targetPosition) => {
-    // Check all pieces to see if any are at the target position
-    for (const [color, positions] of Object.entries(piecePositions)) {
-      for (let i = 0; i < positions.length; i++) {
-        if (positions[i] === targetPosition && positions[i] !== null) {
-          return { color, pieceIndex: i };
-        }
-      }
+    // if next jump is on jump slot or on jump slot
+    if ((nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot)
+    ) {
+      nextSlotId += 15
+      nextSlotId %= (length - 1) * numPlayers
+      // pieceTaken(nextSlotId)
     }
-    return null;
+    return nextSlotId
   }
-  // const pieceTaken = (piecePosition) => {
-  //   const currentSlotCircle = document.getElementById(piecePosition)?.childNodes[0]
-  //   const piecesInSlot = currentSlotCircle?.childNodes
-  //   if (piecesInSlot?.length > 0) {
-  //     const pieceTaken = piecesInSlot[0]
-  //     console.log(currentSlotCircle, piecesInSlot, pieceTaken)
-  //     currentSlotCircle.removeChild(pieceTaken)
-  //     findEmptyStationSlot(pieceTaken)
-  //     return true
-  //   }
-  //   return false
-  // }
 
   const calculateFinish = (currPiecePosition, pieceColor, pId, inFinishLane) => {
     console.log(currPiecePosition)
     if (inFinishLane) {
       if ((currPiecePosition + currentRoll) === 5) {
         console.log('won') //FIX: does not win
-        findEmptyStationSlot(document.getElementById(pId))
         return null
       } else {
         const newPiecePosition = currPiecePosition + currentRoll
@@ -211,7 +185,6 @@ const Board = () => {
       }
     } else {
       if (currPiecePosition * 1 - terminalSlots[pieceColor].endSlot === 5) {
-        findEmptyStationSlot(document.getElementById(pId))
         return null
       } else if (currPiecePosition * 1 === terminalSlots[pieceColor].endSlot) {
         return terminalSlots[pieceColor].endSlot
@@ -224,24 +197,17 @@ const Board = () => {
     return Object.keys(ColorsDict).find(c => ColorsDict[c] === color)
   }
 
-
-  const findEmptyStationSlot = ({ color, pieceIndex }) => {
-    //FIX: need identify and return to an empty slot, position null needs to be position red-spot-id, make starting station part of renderPath
-    setPiecePositions(prev => {
-      const newPositions = { ...prev };
-      newPositions[color][pieceIndex] = color + '-spot-' + pieceIndex;
-      return newPositions;
-    });
-    // const pieceIdParsed = pieceElement.id.split('-')
-    // const startSlotElements = document.getElementById(pieceIdParsed[0] + '-station').children
-    // console.log(startSlotElements.item(3), pieceIdParsed[1] * 1 - 1)
-
-    // const allocatedSlot = startSlotElements.item(pieceIdParsed[1] * 1 - 1)
-    // allocatedSlot.appendChild(pieceElement)
-    // console.log(allocatedSlot)
-
-
-    return
+  const canTakePiece = (targetPosition) => {
+    // Check all pieces to see if any are at the target position
+    for (const [color, positions] of Object.entries(piecePositions)) {
+      for (let i = 0; i < positions.length; i++) {
+        if (positions[i] === targetPosition && positions[i] !== null && positions[i] !== 0) {
+          console.log(color, i)
+          return { color: color, pieceIndex: i }
+        }
+      }
+    }
+    return null;
   }
 
   const handleRoll = () => {
