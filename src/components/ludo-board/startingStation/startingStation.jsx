@@ -5,17 +5,16 @@ const StartingStation = ({ bgColor, onPieceSelect, positions }) => {
   function styleStartingPosition(bgColor) {
     return bgColor + '-starting'
   }
-  return (//TODO: move starting platform to path compoonent, null is at station and index 0 for starting platform
+  return (
     <div className="starting-station-container" key={styleStartingPosition(bgColor)} id={styleStartingPosition(bgColor)}>
-      <div className="starting-slot">
-        {/* {/* <span>{positions.length > 1 ? positions.length + 'x' : ''}</span> */}
+      <div className="starting-slot" key={`${bgColor}-starting-slot`} id={`${bgColor}-starting-slot`}>
         {positions.map((p, i) => (<>{p === 0 && <Piece id={bgColor + '-' + (i + 1)} className="piece" pieceColor={bgColor} onClickPiece={onPieceSelect} position={p} />}</>))}
         <div style={{ color: bgColor }}>start</div>
       </div>
 
-      <div className="station" style={{ backgroundColor: bgColor }} >
+      <div className="station" style={{ backgroundColor: bgColor }} key={`${bgColor}-station`} id={`${bgColor}-station`} >
         {positions.map((p, i) => (
-          <div className="start-spot">
+          <div className="start-spot" key={`${bgColor}-spot-${i}`} id={`${bgColor}-spot-${i}`}>
             {p === null && <Piece className="piece" pieceColor={bgColor} id={bgColor + '-' + (i + 1)} onClickPiece={onPieceSelect} position={null} />}
           </div>
         ))}
