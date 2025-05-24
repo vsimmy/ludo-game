@@ -139,7 +139,7 @@ const Board = () => {
       // jump or finish lane
       const slotColor = document.getElementById(newPosition)?.style.backgroundColor
       const pieceToTake = canTakePiece(newPosition)
-      if (pieceToTake) {
+      if (pieceToTake && currPosition !== terminalSlots[currentColor].endSlot) {
         console.log('home')
         newPositions[currentColor][pieceId] = newPosition
         newPositions[pieceToTake.color][pieceToTake.pieceIndex] = null
@@ -149,6 +149,13 @@ const Board = () => {
             (currPosition !== 0 && currPosition <= terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
             ? calculateFinish(newPosition, currentColor, pId, false) // gets next position within finish lane
             : (slotColor === currentColor ? calculateJump(newPosition, currentColor) : newPosition) // gets next position, if possible also jumps
+        if (!newPositions[currentColor][pieceId].toString().includes('-') && newPositions[currentColor][pieceId] !== null) {
+          const pieceToTakeAfterJump = canTakePiece(newPositions[currentColor][pieceId])
+          if (pieceToTakeAfterJump) {
+            console.log('home')
+            newPositions[pieceToTakeAfterJump.color][pieceToTakeAfterJump.pieceIndex] = null
+          }
+        }
       }
       console.log(newPosition, newPositions)
     }
@@ -178,7 +185,7 @@ const Board = () => {
     if (inFinishLane) {
       if ((currPiecePosition + currentRoll) === 5) {
         console.log('won') //FIX: does not win
-        return null
+        return 'won'
       } else {
         const newPiecePosition = currPiecePosition + currentRoll
         return (newPiecePosition > 5 ? 5 - (newPiecePosition - 5) : newPiecePosition).toString()
@@ -209,6 +216,7 @@ const Board = () => {
     }
     return null;
   }
+
 
   const handleRoll = () => {
     const nextTurnInd = Math.max(0, (currentTurnInd + 1 - (sixRoll > 0)) % numPlayers);
