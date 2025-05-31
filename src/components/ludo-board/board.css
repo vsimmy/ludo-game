@@ -6,7 +6,7 @@
 
 .board {
   width: 32vw;
-  height: 64vh;
+  height: 72vh;
   border: 2px solid;
   display: flex;
   flex-direction: column;

@@ -1,6 +1,6 @@
 import StartingStation from "./startingStation/startingStation";
 import "./board.css";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
 
@@ -21,7 +21,6 @@ const Board = () => {
   const [piecePositions, setPiecePositions] = useState(initPositions);
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
   const [goHome, setGoHome] = useState(false);
-  const [pieceTaken, setPieceTaken] = useState({ color: null, pieceIndex: null })
 
   const length = 13
   const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
@@ -62,7 +61,7 @@ const Board = () => {
     }
     return slotObj
   }, {});
-  // const [pathCode, setPathCode] = useState(startBoard)
+
   function parseSlot(codeString) {
     const code = codeString.split('-')
     const fraction = code.length > 0 ? parseFloat(code[1]) * 0.01 : 0
@@ -89,8 +88,7 @@ const Board = () => {
       try { return ColorsDict[code] } catch (e) { throw new Error('no such code') }
     }
   }
-  //TODO: when a piece reaches the finsihing lane, it should move to the same index of next array
-  //TODO: when taking a piece on same color slot, it has a choice to jump or take
+
   //TODO: 3 sixes send piece home
   //FIX: optimisation at the end, around round 21+, server will freeze
   const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
@@ -100,7 +98,6 @@ const Board = () => {
     // setTimeout(() => this.setState({ hasPieceSelected: false }), 5000);//FIX add timeout after dice roll
     if (currentColor === color && hasPieceSelected === true) {
 
-      //TODO: misclick an immovable piece or if piece has finished
       if (validPieceClick(position)) {
         setHasPieceSelected(false)
         calculatePiecePositions(currentRoll, id, color, position)
@@ -117,7 +114,6 @@ const Board = () => {
     console.log(currSlot)
 
     if (goHome === true) {
-      // findEmpty and go home
       console.log(goHome)
       newPositions[currentColor][pieceId] = null
       setGoHome(false);
@@ -135,18 +131,16 @@ const Board = () => {
           (roll % 2 === 0 ? 0 : null)
           : Math.min((currSlot % (maxSlot) === 0 ? maxSlot : currSlot % maxSlot), currSlot) + colorShift
       console.log(currPosition, newPosition, terminalSlots[currentColor])
-      //TODO: add piece take here, avoid DOM manipulation and use React State
       // jump or finish lane
       const slotColor = document.getElementById(newPosition)?.style.backgroundColor
       const pieceToTake = canTakePiece(newPosition)
-      if (pieceToTake && currPosition !== terminalSlots[currentColor].endSlot) {
+      if (pieceToTake && currPosition !== terminalSlots[currentColor].endSlot && !inFinishLane(pId, currPosition, newPosition)) {
         console.log('home')
         newPositions[currentColor][pieceId] = newPosition
         newPositions[pieceToTake.color][pieceToTake.pieceIndex] = null
       } else {
         newPositions[currentColor][pieceId] =
-          document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
-            (currPosition !== 0 && currPosition <= terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
+          inFinishLane(pId, currPosition, newPosition)
             ? calculateFinish(newPosition, currentColor, pId, false) // gets next position within finish lane
             : (slotColor === currentColor ? calculateJump(newPosition, currentColor) : newPosition) // gets next position, if possible also jumps
         if (!newPositions[currentColor][pieceId].toString().includes('-') && newPositions[currentColor][pieceId] !== null) {
@@ -163,7 +157,10 @@ const Board = () => {
     setPiecePositions(newPositions)
 
   }
-
+  const inFinishLane = (pId, currPosition, newPosition) => {
+    return document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
+      (currPosition !== 0 && currPosition <= terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
+  }
   const calculateJump = (piecePosition, pieceColor) => {
     console.log('jump')
     let nextSlotId = piecePosition + 1
@@ -184,7 +181,6 @@ const Board = () => {
     console.log(currPiecePosition)
     if (inFinishLane) {
       if ((currPiecePosition + currentRoll) === 5) {
-        console.log('won') //FIX: does not win
         return 'won'
       } else {
         const newPiecePosition = currPiecePosition + currentRoll
@@ -192,7 +188,7 @@ const Board = () => {
       }
     } else {
       if (currPiecePosition * 1 - terminalSlots[pieceColor].endSlot === 5) {
-        return null
+        return 'won'
       } else if (currPiecePosition * 1 === terminalSlots[pieceColor].endSlot) {
         return terminalSlots[pieceColor].endSlot
       } else {
@@ -208,7 +204,7 @@ const Board = () => {
     // Check all pieces to see if any are at the target position
     for (const [color, positions] of Object.entries(piecePositions)) {
       for (let i = 0; i < positions.length; i++) {
-        if (positions[i] === targetPosition && positions[i] !== null && positions[i] !== 0) {
+        if (positions[i] === targetPosition && positions[i] !== null && positions[i] !== 0 && color !== currentColor) {
           console.log(color, i)
           return { color: color, pieceIndex: i }
         }
@@ -244,7 +240,8 @@ const Board = () => {
       currentRoll: randomRoll,
       roundDisplay: newTurnDisplay,
       piecePositions: piecePositions,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
+      event: ''
     }
 
     setGameLog([...gameLog, newGameLogEntry])
@@ -317,8 +314,6 @@ const Board = () => {
                   })))}
                 </div>
               </div>}
-
-
             </div>
           )
           )}
