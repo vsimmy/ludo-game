@@ -2,7 +2,6 @@
 const Piece = ({ pieceColor, id, onClickPiece, position }) => {
 
   const handleClick = () => {
-    console.log(id, pieceColor, position)
     onClickPiece(id, pieceColor, position);
   }
 

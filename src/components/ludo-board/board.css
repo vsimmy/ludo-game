@@ -242,3 +242,20 @@
   background-color: white;
 
 }
+
+.player-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  padding-top: 1rem;
+}
+
+.player-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.game-controls {
+  width: 16vw
+}

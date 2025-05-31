@@ -3,6 +3,7 @@ import "./board.css";
 import { useState } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
+import Piece from "../piece/piece.jsx";
 
 const Board = () => {
 
@@ -157,6 +158,7 @@ const Board = () => {
     setPiecePositions(newPositions)
 
   }
+
   const inFinishLane = (pId, currPosition, newPosition) => {
     return document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
       (currPosition !== 0 && currPosition <= terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
@@ -178,7 +180,6 @@ const Board = () => {
   }
 
   const calculateFinish = (currPiecePosition, pieceColor, pId, inFinishLane) => {
-    console.log(currPiecePosition)
     if (inFinishLane) {
       if ((currPiecePosition + currentRoll) === 5) {
         return 'won'
@@ -205,14 +206,12 @@ const Board = () => {
     for (const [color, positions] of Object.entries(piecePositions)) {
       for (let i = 0; i < positions.length; i++) {
         if (positions[i] === targetPosition && positions[i] !== null && positions[i] !== 0 && color !== currentColor) {
-          console.log(color, i)
           return { color: color, pieceIndex: i }
         }
       }
     }
     return null;
   }
-
 
   const handleRoll = () => {
     const nextTurnInd = Math.max(0, (currentTurnInd + 1 - (sixRoll > 0)) % numPlayers);
@@ -284,6 +283,50 @@ const Board = () => {
     </div>)
   }
 
+  const renderGameStat = () => {
+    return (<><div className="player-grid">{Object.entries(piecePositions).map(([color, positions], _
+    ) => (
+      <div className="player-card">
+        <Piece className="piece" pieceColor={color} id={color + '-stat'} onClickPiece={null} />
+        <div>
+          {'Won: ' + positions.filter(p => p === 'won').length}
+        </div>
+        <div>
+          {'Home: ' + positions.filter(p => p === null).length}
+        </div>
+      </div>
+    ))}</div></>)
+  }
+
+  const renderGameLog = () => {
+    return (<><button className="toggle-button"
+      onClick={toggleLogPanel}
+    >
+      {showGameLog ? "Hide Log" : "Show Log"}
+    </button>
+      {showGameLog && (<div className="log-panel">
+        <div className="log-header">({gameLog.length} entries)</div>
+        <div className="log-content">
+          {gameLog.length === 0 ? (
+            <div className="empty-log">No history yet</div>
+          ) : (
+            <ul className="log-list">
+              {gameLog.map((entry, index) => (
+                <li
+                  key={index}
+                  onClick={() => restoreFromLog(entry)}
+                  className="log-item"
+                >
+                  <span>{entry.roundDisplay}</span>
+                  <span className="timestamp">{entry.timestamp}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      )}</>)
+  }
 
   const renderPath = () => {
     return <div style={{ display: "flex", flexDirection: "column", margin: "0" }}>
@@ -339,45 +382,17 @@ const Board = () => {
           <StartingStation bgColor={PieceColor.BLUE} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.BLUE]} />
         </div>
       </div>
-      <div>
+      <div className="game-controls">
         <div>
           <button className="roll-button" onClick={handleRoll}>Roll the Dice</button>
         </div>
         <div className="display-text">
           {roundDisplay}
         </div>
-        <button className="toggle-button"
-          onClick={toggleLogPanel}
-        >
-          {showGameLog ? "Hide Log" : "Show Log"}
-        </button>
-        {showGameLog && (<div className="log-panel">
-          <div className="log-header">({gameLog.length} entries)</div>
-          <div className="log-content">
-            {gameLog.length === 0 ? (
-              <div className="empty-log">No history yet</div>
-            ) : (
-              <ul className="log-list">
-                {gameLog.map((entry, index) => (
-                  <li
-                    key={index}
-                    onClick={() => restoreFromLog(entry)}
-                    className="log-item"
-                  >
-                    <span>{entry.roundDisplay}</span>
-                    <span className="timestamp">{entry.timestamp}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-        )}
-
-      </div></div>
-
-
-
+        <>{renderGameStat()}</>
+        <>{renderGameLog()}</>
+      </div>
+    </div>
   );
 };
 
