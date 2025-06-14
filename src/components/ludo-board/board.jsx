@@ -56,7 +56,7 @@ const Board = () => {
 
   const terminalSlots = Object.keys(PieceColor).reduce((slotObj, color, index) => {
     slotObj[PieceColor[color]] = {
-      startSlot: index * (length - 1),
+      startSlot: index === 0 ? 1 : index * (length - 1),
       endSlot: (index * (length - 1) === 0 ? (length - 1) * numPlayers : (index * (length - 1)) % ((length - 1) * numPlayers)) - 2,
       jumpSlot: ((index + 1) * (length - 1)) % ((length - 1) * numPlayers) + 4
     }
@@ -112,7 +112,7 @@ const Board = () => {
     const newPositions = JSON.parse(JSON.stringify(piecePositions)) // create deep copy
     let pieceId = pId.split('-')[1] - 1
     let currSlot = piecePositions[currentColor][pieceId]
-    console.log(currSlot)
+    console.log(currSlot, terminalSlots)
 
     if (goHome === true) {
       console.log(goHome)
@@ -161,7 +161,8 @@ const Board = () => {
 
   const inFinishLane = (pId, currPosition, newPosition) => {
     return document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
-      (currPosition !== 0 && currPosition <= terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
+      currPosition === terminalSlots[currentColor].endSlot ||
+      (currPosition !== 0 && currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
   }
   const calculateJump = (piecePosition, pieceColor) => {
     console.log('jump')
@@ -220,7 +221,7 @@ const Board = () => {
     const newRoundNum = round + 1;
     setHasPieceSelected(true)
     if (randomRoll === 6) {
-      if (sixRoll < 3) {
+      if (sixRoll < 2) {
         setSixRoll(sixRoll => sixRoll + 1);
       } else {
         console.log('go home')
@@ -272,7 +273,7 @@ const Board = () => {
   }
 
   const renderJumpSlot = (color, rotate) => {
-    return (<div className="slot-empty-container"><div className={rotate === '180deg' ? "jump-vertical" : "jump-horizontal"} style={{ backgroundColor: color, '--arrow-color': color }}></div></div>)
+    return (<div className="slot-empty-container"><div className={rotate === '180deg' ? "jump-vertical" : "jump-horizontal"} style={{ backgroundColor: color, '--arrow-color': color, }}></div></div>)
   }
 
   const renderPiece = (pieceId, color, position) => {
@@ -289,7 +290,7 @@ const Board = () => {
       <div className="player-card">
         <Piece className="piece" pieceColor={color} id={color + '-stat'} onClickPiece={null} />
         <div>
-          {'Won: ' + positions.filter(p => p === 'won').length}
+          {'Won: ' + positions.filter(p => p?.toString().includes('won')).length}
         </div>
         <div>
           {'Home: ' + positions.filter(p => p === null).length}
@@ -329,16 +330,12 @@ const Board = () => {
   }
 
   const renderPath = () => {
-    return <div style={{ display: "flex", flexDirection: "column", margin: "0" }}>
+    return <div className="path-grid">
       {startBoard.map((row, rowIndex) => (
         <div
           key={'row-' + rowIndex}
           id={'row-' + rowIndex}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            margin: "0",
-          }}
+          className="path-row"
         >
           {row.map((slot, slotIndex) => (
             <div className="slot-container" key={rowIndex * length + slotIndex}>
