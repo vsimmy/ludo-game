@@ -152,7 +152,6 @@ const Board = () => {
           }
         }
       }
-      console.log(newPosition, newPositions)
     }
     console.log(newPositions)
     setPiecePositions(newPositions)
@@ -184,8 +183,9 @@ const Board = () => {
     if (inFinishLane) {
       if ((currPiecePosition + currentRoll) === 5) {
         return 'won'
+
       } else {
-        const newPiecePosition = currPiecePosition + currentRoll
+        const newPiecePosition = currPiecePosition === terminalSlots[pieceColor] ? currentRoll : currPiecePosition + currentRoll
         return (newPiecePosition > 5 ? 5 - (newPiecePosition - 5) : newPiecePosition).toString()
       }
     } else {
