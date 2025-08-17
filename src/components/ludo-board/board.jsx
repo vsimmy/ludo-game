@@ -56,7 +56,7 @@ const Board = () => {
 
   const terminalSlots = Object.keys(PieceColor).reduce((slotObj, color, index) => {
     slotObj[PieceColor[color]] = {
-      startSlot: index === 0 ? 1 : index * (length - 1),
+      startSlot: index === 0 ? 0 : index * (length - 1),
       endSlot: (index * (length - 1) === 0 ? (length - 1) * numPlayers : (index * (length - 1)) % ((length - 1) * numPlayers)) - 2,
       jumpSlot: ((index + 1) * (length - 1)) % ((length - 1) * numPlayers) + 4
     }
