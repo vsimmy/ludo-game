@@ -1,9 +1,10 @@
 import StartingStation from "./startingStation/startingStation";
 import "./board.css";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
 import Piece from "../piece/piece.jsx";
+import PlayersConfig from "../players-config/players-config.jsx"
 
 const Board = () => {
 
@@ -12,6 +13,8 @@ const Board = () => {
     acc[key] = [null, null, null, null]
     return acc
   }, {})
+
+  const [gameStarted, setGameStarted] = useState(false)
   const [round, setRound] = useState(0);
   const [currentTurnInd, setCurrentTurnInd] = useState(-1);
   const [currentRoll, setCurrentRoll] = useState(0);
@@ -22,6 +25,7 @@ const Board = () => {
   const [piecePositions, setPiecePositions] = useState(initPositions);
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
   const [goHome, setGoHome] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const length = 13
   const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
@@ -273,7 +277,25 @@ const Board = () => {
   }
 
   const renderJumpSlot = (color, rotate) => {
-    return (<div className="slot-empty-container"><div className={rotate === '180deg' ? "jump-vertical" : "jump-horizontal"} style={{ backgroundColor: color, '--arrow-color': color, }}></div></div>)
+    let jumpClass;
+    switch (color) {
+      case PieceColor.BLUE:
+        jumpClass = 'jump-up'
+        break;
+      case PieceColor.GREEN:
+        jumpClass = 'jump-right'
+        break;
+      case PieceColor.RED:
+        jumpClass = 'jump-down'
+        break;
+      case PieceColor.ORANGE:
+        jumpClass = 'jump-left'
+        break;
+      default:
+        return;
+
+    }
+    return (<div className="slot-empty-container"><div className={jumpClass} style={{ backgroundColor: color, '--arrow-color': color, }}></div></div>)
   }
 
   const renderPiece = (pieceId, color, position) => {
@@ -361,34 +383,144 @@ const Board = () => {
       ))}
     </div >
   }
+  const borderColor = '#007bff'
+  const borderWidth = 2
+  const offset = 10
+  const arrowPosition = 'top'
+  const arrowSize = 1
+  const getBorderStyle = () => ({
+    position: 'absolute',
+    top: -offset,
+    left: -offset,
+    right: -offset,
+    bottom: -offset,
+    border: `${borderWidth}px solid ${borderColor}`,
+    borderRadius: '12px',
+    opacity: isHovered ? 1 : 0,
+    transform: isHovered ? 'scale(1)' : 'scale(0.95)',
+    transition: 'all 0.3s ease',
+    pointerEvents: 'none',
+    zIndex: -1,
+  });
+  const getArrowStyle = () => {
+    const baseStyle = {
+      position: 'absolute',
+      width: 0,
+      height: 0,
+      opacity: isHovered ? 1 : 0,
+      transition: 'all 0.3s ease',
+      pointerEvents: 'none',
+    };
+
+    const arrowOffset = isHovered ? 5 : 0;
+
+    switch (arrowPosition) {
+      case 'top':
+        return {
+          ...baseStyle,
+          top: isHovered ? -(offset + arrowSize + arrowOffset) : -(offset + arrowSize),
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderLeft: `${arrowSize}px solid transparent`,
+          borderRight: `${arrowSize}px solid transparent`,
+          borderTop: `${arrowSize + 5}px solid ${borderColor}`,
+        };
+      case 'bottom':
+        return {
+          ...baseStyle,
+          bottom: isHovered ? -(offset + arrowSize + arrowOffset) : -(offset + arrowSize),
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderLeft: `${arrowSize}px solid transparent`,
+          borderRight: `${arrowSize}px solid transparent`,
+          borderBottom: `${arrowSize + 5}px solid ${borderColor}`,
+        };
+      case 'left':
+        return {
+          ...baseStyle,
+          left: isHovered ? -(offset + arrowSize + arrowOffset) : -(offset + arrowSize),
+          top: '50%',
+          transform: 'translateY(-50%)',
+          borderTop: `${arrowSize}px solid transparent`,
+          borderBottom: `${arrowSize}px solid transparent`,
+          borderLeft: `${arrowSize + 5}px solid ${borderColor}`,
+        };
+      case 'right':
+        return {
+          ...baseStyle,
+          right: isHovered ? -(offset + arrowSize + arrowOffset) : -(offset + arrowSize),
+          top: '50%',
+          transform: 'translateY(-50%)',
+          borderTop: `${arrowSize}px solid transparent`,
+          borderBottom: `${arrowSize}px solid transparent`,
+          borderRight: `${arrowSize + 5}px solid ${borderColor}`,
+        };
+      default:
+        return baseStyle;
+    }
 
 
 
+  };
+  const elementRef = useRef(null);
+  const renderStartingStation = (color) => {
+    return (
+      <div
+        ref={elementRef}
+        style={{
+          position: 'relative',
+          display: 'inline-block',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          transform: isHovered ? 'translateY(-5px)' : 'translateY(0)',
+          boxShadow: isHovered ? `0 10px 25px ${color}33` : 'none',
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div style={getBorderStyle()} />
+
+
+        <div style={getArrowStyle()} />
+        <StartingStation bgColor={color} onPieceSelect={handlePieceSelect} positions={piecePositions[color]} />
+      </div>
+    )
+  }
+
+  const handleStartGame = () => {
+    setTimeout(() => setGameStarted(true), 300)
+
+  };
   return (
     <div className="container">
-      <div className="board">
-        <div className="adjacent-stations">
-          <StartingStation bgColor={PieceColor.RED} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.RED]} />
-          <StartingStation bgColor={PieceColor.ORANGE} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.ORANGE]} />
+      {!gameStarted && <PlayersConfig toStart={handleStartGame}></PlayersConfig>}
+      {gameStarted && (<>
+        <div className="board">
+          <div className="adjacent-stations">
+            {renderStartingStation(PieceColor.RED)}
+            {renderStartingStation(PieceColor.ORANGE)}
+            {/* <StartingStation bgColor={PieceColor.RED} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.RED]} />
+          <StartingStation bgColor={PieceColor.ORANGE} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.ORANGE]} /> */}
+          </div>
+          <div className="path-container">
+            {renderPath()}
+          </div>
+          <div className="adjacent-stations">
+            {/* <StartingStation bgColor={PieceColor.GREEN} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.GREEN]} />
+          <StartingStation bgColor={PieceColor.BLUE} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.BLUE]} /> */}
+            {renderStartingStation(PieceColor.GREEN)}
+            {renderStartingStation(PieceColor.BLUE)}
+          </div>
         </div>
-        <div className="path-container">
-          {renderPath()}
-        </div>
-        <div className="adjacent-stations">
-          <StartingStation bgColor={PieceColor.GREEN} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.GREEN]} />
-          <StartingStation bgColor={PieceColor.BLUE} onPieceSelect={handlePieceSelect} positions={piecePositions[PieceColor.BLUE]} />
-        </div>
-      </div>
-      <div className="game-controls">
-        <div>
-          <button className="roll-button" onClick={handleRoll}>Roll the Dice</button>
-        </div>
-        <div className="display-text">
-          {roundDisplay}
-        </div>
-        <>{renderGameStat()}</>
-        <>{renderGameLog()}</>
-      </div>
+        <div className="game-controls">
+          <div>
+            <button className="roll-button" onClick={handleRoll}>Roll the Dice</button>
+          </div>
+          <div className="display-text">
+            {roundDisplay}
+          </div>
+          <>{renderGameStat()}</>
+          <>{renderGameLog()}</>
+        </div></>)}
     </div>
   );
 };
