@@ -1,6 +1,6 @@
 import StartingStation from "./startingStation/startingStation";
 import "./board.css";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
 import Piece from "../piece/piece.jsx";
@@ -57,6 +57,26 @@ const Board = () => {
     twelvethRow,
     thirteenthRow
   ];
+
+  const mainPathLength = (length - 1) * numPlayers; // 48 numbered slots around the board
+
+  // Precomputed slotNum -> color lookup, derived once from startBoard itself
+  // (replaces reading document.getElementById(...).style.backgroundColor at runtime,
+  // which was fragile and the likely cause of the late-game freeze/hang).
+  const slotColorMap = useMemo(() => {
+    const map = {}
+    startBoard.forEach(row => {
+      row.forEach(code => {
+        if (!code) return
+        const parsed = parseSlot(code)
+        if (parsed.type !== 'jump' && parsed.slotNum !== null && !parsed.slotNum.toString().includes('-')) {
+          map[parsed.slotNum] = parsed.color
+        }
+      })
+    })
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const terminalSlots = Object.keys(PieceColor).reduce((slotObj, color, index) => {
     slotObj[PieceColor[color]] = {
@@ -137,7 +157,7 @@ const Board = () => {
           : Math.min((currSlot % (maxSlot) === 0 ? maxSlot : currSlot % maxSlot), currSlot) + colorShift
       console.log(currPosition, newPosition, terminalSlots[currentColor])
       // jump or finish lane
-      const slotColor = document.getElementById(newPosition)?.style.backgroundColor
+      const slotColor = slotColorMap[newPosition]
       const pieceToTake = canTakePiece(newPosition)
       if (pieceToTake && currPosition !== terminalSlots[currentColor].endSlot && !inFinishLane(pId, currPosition, newPosition)) {
         console.log('home')
@@ -163,22 +183,28 @@ const Board = () => {
   }
 
   const inFinishLane = (pId, currPosition, newPosition) => {
-    return document.getElementById(pId).parentElement.parentElement.className.includes('square-finish') || // on finish lane
-      currPosition === terminalSlots[currentColor].endSlot ||
+    return currPosition === terminalSlots[currentColor].endSlot ||
       (currPosition !== 0 && currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
   }
   const calculateJump = (piecePosition, pieceColor) => {
-    console.log('jump')
-    let nextSlotId = piecePosition + 1
-    while (document.getElementById(nextSlotId)?.style.backgroundColor !== pieceColor) {
-      nextSlotId++;
+    let nextSlotId = piecePosition
+    let found = false
+    for (let i = 0; i < mainPathLength; i++) {
+      nextSlotId = (nextSlotId % mainPathLength) + 1 // wraps 48 -> 1
+      if (slotColorMap[nextSlotId] === pieceColor) {
+        found = true
+        break
+      }
     }
-    // if next jump is on jump slot or on jump slot
-    if ((nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot)
-    ) {
+    if (!found) {
+      // Defensive fallback: no matching color found on the whole path (shouldn't happen
+      // given the board layout), so don't move the piece anywhere unexpected.
+      return piecePosition
+    }
+    // if next jump lands on, or departs from, this color's special jump slot, jump across the board
+    if (nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot) {
       nextSlotId += 15
-      nextSlotId %= (length - 1) * numPlayers
-      // pieceTaken(nextSlotId)
+      nextSlotId = ((nextSlotId - 1) % mainPathLength) + 1
     }
     return nextSlotId
   }
@@ -189,7 +215,7 @@ const Board = () => {
         return 'won'
 
       } else {
-        const newPiecePosition = currPiecePosition === terminalSlots[pieceColor] ? currentRoll : currPiecePosition + currentRoll
+        const newPiecePosition = currPiecePosition + currentRoll
         return (newPiecePosition > 5 ? 5 - (newPiecePosition - 5) : newPiecePosition).toString()
       }
     } else {
