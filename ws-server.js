@@ -1,6 +1,6 @@
-const Websocket = require('ws');
+const WebSocket = require('ws');
 
-const wss = new Websocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 8080 });
 
 console.log('running socket');
 
@@ -14,22 +14,23 @@ wss.on('connection', (ws) => {
     ws.on('message', (data) => {
         try {
             const parsedData = JSON.parse(data);
-            console.log('Received:', parsedData);
+            console.log('Received:', parsedData.type);
 
             // Handle different message types
-            if (parsedData.type === 'ludoGameState') {
-                // Broadcast game state to all clients
+            if (parsedData.type === 'gameState') {
+                // Relay the real game state to every other connected client.
+                // NOTE: this is a naive broadcast relay for local/offline testing only —
+                // there is no authentication, room/session separation, or server-side
+                // rules validation here. Anyone connected sees and can send state for
+                // every game. That's the gap to close before this is production-ready
+                // for a shareable public URL.
                 wss.clients.forEach(function each(client) {
-                    if (client.readyState === WebSocket.OPEN) {
+                    if (client !== ws && client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
-                            type: 'gameState',
-                            // parsedData.gameStateData
-                            gameStateData: {
-                                piecePos: [],
-                                currTurn: 'red',
-                                currRoll: 3
-                            },
-                            from: parsedData.from || 'anonymous'
+                            type: 'gameStateUpdate',
+                            gameState: parsedData.gameState,
+                            from: parsedData.from || 'anonymous',
+                            timestamp: parsedData.timestamp || Date.now()
                         }));
                     }
                 });
@@ -44,6 +45,10 @@ wss.on('connection', (ws) => {
                         }));
                     }
                 });
+            } else if (parsedData.type === 'heartbeat') {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
+                }
             }
         } catch (error) {
             console.error('Error parsing message:', error);

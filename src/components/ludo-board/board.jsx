@@ -1,10 +1,13 @@
 import StartingStation from "./startingStation/startingStation";
 import "./board.css";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
 import Piece from "../piece/piece.jsx";
 import PlayersConfig from "../players-config/players-config.jsx"
+import { useWs } from "../../hooks/ws-hook.jsx"
+
+const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:8080'
 
 const Board = () => {
 
@@ -28,6 +31,14 @@ const Board = () => {
   const [lastMovedPiece, setLastMovedPiece] = useState(null); // { color, pieceId } — tracks which piece to send home on 3 consecutive sixes
   const [isHovered, setIsHovered] = useState(false);
   const [winner, setWinner] = useState(null);
+
+  // Multiplayer sync: mirrors full game state to any other connected client via
+  // ws-server.js. This is a "shared state broadcast", not an authoritative server —
+  // there's no per-connection identity, room isolation, or move validation on the
+  // server side yet. Fine for local/offline testing with someone on the same
+  // network; NOT yet safe for a public shareable URL (see server-side comment).
+  const { isConnected, connectionState, gameState, sendGameState } = useWs(WS_URL)
+  const isApplyingRemoteRef = useRef(false)
 
   const length = 13
   const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
@@ -61,6 +72,38 @@ const Board = () => {
   ];
 
   const mainPathLength = (length - 1) * numPlayers; // 48 numbered slots around the board
+
+  // Broadcast our game state to other connected clients whenever it changes locally.
+  useEffect(() => {
+    if (!gameStarted) return
+    if (isApplyingRemoteRef.current) {
+      // This change came from an incoming remote update — don't echo it back.
+      isApplyingRemoteRef.current = false
+      return
+    }
+    sendGameState({
+      piecePositions, currentTurnInd, currentRoll, round, roundDisplay,
+      sixRoll, winner, lastMovedPiece, goHome
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [piecePositions, currentTurnInd, currentRoll, round, roundDisplay, sixRoll, winner])
+
+  // Apply state received from another connected client.
+  useEffect(() => {
+    if (!gameState) return
+    isApplyingRemoteRef.current = true
+    setPiecePositions(gameState.piecePositions)
+    setCurrentTurnInd(gameState.currentTurnInd)
+    setCurrentRoll(gameState.currentRoll)
+    setRound(gameState.round)
+    setRoundDisplay(gameState.roundDisplay)
+    setSixRoll(gameState.sixRoll)
+    setWinner(gameState.winner)
+    setLastMovedPiece(gameState.lastMovedPiece)
+    setGoHome(gameState.goHome)
+    if (!gameStarted) setGameStarted(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState])
 
   // Precomputed slotNum -> color lookup, derived once from startBoard itself
   // (replaces reading document.getElementById(...).style.backgroundColor at runtime,
@@ -607,6 +650,9 @@ const Board = () => {
           </div>
           <div className="display-text">
             {winner ? `🎉 ${winner.toUpperCase()} WINS! 🎉` : roundDisplay}
+          </div>
+          <div className="display-text" style={{ fontSize: '0.75em', opacity: 0.7 }}>
+            {isConnected ? '🟢 Synced with other players' : `⚪ Offline (multiplayer: ${connectionState})`}
           </div>
           <>{renderGameStat()}</>
           <>{renderGameLog()}</>
