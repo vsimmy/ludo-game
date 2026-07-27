@@ -153,19 +153,13 @@ const Board = () => {
     }
   }
   function parseSlotColor(code) {
-    if (code === '') { return '' }
-    else {
-      try { return ColorsDict[code] } catch (e) { throw new Error('no such code') }
-    }
+    return code === '' ? '' : ColorsDict[code]
   }
 
   //TODO: 3 sixes send piece home
   //FIX: optimisation at the end, around round 21+, server will freeze
   const currentColor = currentTurnInd === -1 ? null : Object.values(PieceColor)[currentTurnInd]
   const handlePieceSelect = (id, color, position) => {
-    console.log("Piece selected:", { id, color, position, currentColor, currentRoll, hasPieceSelected });
-
-    // setTimeout(() => this.setState({ hasPieceSelected: false }), 5000);//FIX add timeout after dice roll
     if (currentColor === color && hasPieceSelected === true) {
 
       if (validPieceClick(position)) {
@@ -181,7 +175,6 @@ const Board = () => {
     const newPositions = JSON.parse(JSON.stringify(piecePositions)) // create deep copy
     let pieceId = pId.split('-')[1] - 1
     let currSlot = piecePositions[currentColor][pieceId]
-    console.log(currSlot, terminalSlots)
 
     if (goHome === true) {
       newPositions[currentColor][pieceId] = null
@@ -208,7 +201,6 @@ const Board = () => {
         currPosition === null ?
           (roll % 2 === 0 ? 0 : null)
           : Math.min((currSlot % (maxSlot) === 0 ? maxSlot : currSlot % maxSlot), currSlot) + colorShift
-      console.log(currPosition, newPosition, terminalSlots[currentColor])
       // jump or finish lane
       const slotColor = slotColorMap[newPosition]
       const piecesToTake = canTakePieces(newPosition)
@@ -354,7 +346,6 @@ const Board = () => {
     }
 
     const displayColor = Object.values(PieceColor)[(sixRoll > 0) ? currentTurnInd : nextTurnInd]
-    console.log(displayColor, currentTurnInd, nextTurnInd)
     const newTurnDisplay = getDisplay(newRoundNum, displayColor, randomRoll);
     const newGameLogEntry = {
       currentRound: newRoundNum,
@@ -377,11 +368,13 @@ const Board = () => {
   }
 
   const restoreFromLog = (logEntry) => {
+    // NOTE: logEntry.currentTurnInd is never actually set when log entries are created
+    // (only currentRound is) — this will restore turn index as undefined. Flagging
+    // rather than fixing since the log/restore feature itself wasn't in your spec.
     setCurrentTurnInd(logEntry.currentTurnInd);
     setCurrentRoll(logEntry.currentRoll);
     setRoundDisplay(logEntry.roundDisplay);
     setPiecePositions(logEntry.piecePositions)
-    console.log(currentTurnInd, currentRoll, roundDisplay, piecePositions)
   };
 
   const toggleLogPanel = () => {
@@ -478,21 +471,24 @@ const Board = () => {
         >
           {row.map((slot, slotIndex) => (
             <div className="slot-container" key={rowIndex * length + slotIndex}>
-              {parseSlot(slot).type === 'jump' ? renderJumpSlot(parseSlot(slot).color, parseSlot(slot).rotate) : <div className={SlotOutput(parseSlot(slot).type)}
-                id={parseSlot(slot).slotNum}
-                style={{ rotate: parseSlot(slot).rotate, backgroundColor: parseSlot(slot).color }}
-              >
-                <div className="slot-circle" >
-                  {Object.keys(piecePositions).map(c => (piecePositions[c].map((piecePos, pieceInd) => {
-                    if (String(piecePos) === String(parseSlot(slot).slotNum) && piecePos !== null) {
-                      const pieceId = `${c}-${pieceInd + 1}`
-                      return renderPiece(pieceId, c, piecePos)
-                    } else {
-                      return null
-                    }
-                  })))}
+              {(() => {
+                const parsed = parseSlot(slot)
+                return parsed.type === 'jump' ? renderJumpSlot(parsed.color, parsed.rotate) : <div className={SlotOutput(parsed.type)}
+                  id={parsed.slotNum}
+                  style={{ rotate: parsed.rotate, backgroundColor: parsed.color }}
+                >
+                  <div className="slot-circle" >
+                    {Object.keys(piecePositions).map(c => (piecePositions[c].map((piecePos, pieceInd) => {
+                      if (String(piecePos) === String(parsed.slotNum) && piecePos !== null) {
+                        const pieceId = `${c}-${pieceInd + 1}`
+                        return renderPiece(pieceId, c, piecePos)
+                      } else {
+                        return null
+                      }
+                    })))}
+                  </div>
                 </div>
-              </div>}
+              })()}
             </div>
           )
           )}
