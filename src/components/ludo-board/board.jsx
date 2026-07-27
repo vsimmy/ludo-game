@@ -146,9 +146,16 @@ const Board = () => {
       setPiecePositions(newPositions)
       return
     }
+
+    // Other pieces of this color stacked on the same spot as the one being moved —
+    // they move (and are taken) together with it from here on.
+    const stackMateIds = getStackMates(currentColor, currPosition, pieceId)
+
     // piecePosition on finsih land will have prefix color-
     if (currSlot !== null && currSlot.toString().includes('-')) {
-      newPositions[currentColor][pieceId] = convertColorCode(currentColor) + '-' + calculateFinish(currSlot.split('-')[1] * 1, currentColor, pId, true)
+      const finalValue = convertColorCode(currentColor) + '-' + calculateFinish(currSlot.split('-')[1] * 1, currentColor, pId, true)
+      newPositions[currentColor][pieceId] = finalValue
+      stackMateIds.forEach(id => { newPositions[currentColor][id] = finalValue })
     } else {
       currSlot += roll
       const colorShift = (currPosition === 0) * terminalSlots[currentColor].startSlot
@@ -161,24 +168,23 @@ const Board = () => {
       console.log(currPosition, newPosition, terminalSlots[currentColor])
       // jump or finish lane
       const slotColor = slotColorMap[newPosition]
-      const pieceToTake = canTakePiece(newPosition)
-      if (pieceToTake && currPosition !== terminalSlots[currentColor].endSlot && !inFinishLane(pId, currPosition, newPosition)) {
-        console.log('home')
-        newPositions[currentColor][pieceId] = newPosition
-        newPositions[pieceToTake.color][pieceToTake.pieceIndex] = null
+      const piecesToTake = canTakePieces(newPosition)
+      let finalValue
+      if (piecesToTake.length > 0 && currPosition !== terminalSlots[currentColor].endSlot && !inFinishLane(pId, currPosition, newPosition)) {
+        finalValue = newPosition
+        piecesToTake.forEach(({ color, pieceIndex }) => { newPositions[color][pieceIndex] = null })
       } else {
-        newPositions[currentColor][pieceId] =
+        finalValue =
           inFinishLane(pId, currPosition, newPosition)
             ? calculateFinish(newPosition, currentColor, pId, false) // gets next position within finish lane
             : (slotColor === currentColor ? calculateJump(newPosition, currentColor) : newPosition) // gets next position, if possible also jumps
-        if (!newPositions[currentColor][pieceId].toString().includes('-') && newPositions[currentColor][pieceId] !== null) {
-          const pieceToTakeAfterJump = canTakePiece(newPositions[currentColor][pieceId])
-          if (pieceToTakeAfterJump) {
-            console.log('home')
-            newPositions[pieceToTakeAfterJump.color][pieceToTakeAfterJump.pieceIndex] = null
-          }
+        if (!finalValue.toString().includes('-') && finalValue !== null) {
+          const piecesToTakeAfterJump = canTakePieces(finalValue)
+          piecesToTakeAfterJump.forEach(({ color, pieceIndex }) => { newPositions[color][pieceIndex] = null })
         }
       }
+      newPositions[currentColor][pieceId] = finalValue
+      stackMateIds.forEach(id => { newPositions[currentColor][id] = finalValue })
     }
     setPiecePositions(newPositions)
     setLastMovedPiece({ color: currentColor, pieceId })
@@ -248,16 +254,29 @@ const Board = () => {
     return Object.keys(ColorsDict).find(c => ColorsDict[c] === color)
   }
 
-  const canTakePiece = (targetPosition) => {
-    // Check all pieces to see if any are at the target position
+  const canTakePieces = (targetPosition) => {
+    // Returns every opposing piece sitting on targetPosition (could be more than
+    // one if the opponent has stacked their own-color pieces together there).
+    const taken = []
     for (const [color, positions] of Object.entries(piecePositions)) {
-      for (let i = 0; i < positions.length; i++) {
-        if (positions[i] === targetPosition && positions[i] !== null && positions[i] !== 0 && color !== currentColor) {
-          return { color: color, pieceIndex: i }
+      if (color === currentColor) continue
+      positions.forEach((pos, i) => {
+        if (pos === targetPosition && pos !== null && pos !== 0) {
+          taken.push({ color, pieceIndex: i })
         }
-      }
+      })
     }
-    return null;
+    return taken
+  }
+
+  const getStackMates = (color, position, excludePieceId) => {
+    // Other pieces of the same color already sitting on `position` — these move,
+    // and are taken, together with the piece being moved.
+    if (position === null) return []
+    return piecePositions[color]
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p, idx }) => idx !== excludePieceId && p !== null && p.toString() === position.toString())
+      .map(({ idx }) => idx)
   }
 
   const handleRoll = () => {
