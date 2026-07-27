@@ -195,27 +195,34 @@ const Board = () => {
     return currPosition === terminalSlots[currentColor].endSlot ||
       (currPosition !== 0 && currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
   }
-  const calculateJump = (piecePosition, pieceColor) => {
-    let nextSlotId = piecePosition
-    let found = false
+  const findNextSameColorSlot = (fromSlot, pieceColor) => {
+    let slotId = fromSlot
     for (let i = 0; i < mainPathLength; i++) {
-      nextSlotId = (nextSlotId % mainPathLength) + 1 // wraps 48 -> 1
-      if (slotColorMap[nextSlotId] === pieceColor) {
-        found = true
-        break
-      }
+      slotId = (slotId % mainPathLength) + 1 // wraps 48 -> 1
+      if (slotColorMap[slotId] === pieceColor) return slotId
     }
-    if (!found) {
+    return null
+  }
+
+  const calculateJump = (piecePosition, pieceColor) => {
+    const nextSlotId = findNextSameColorSlot(piecePosition, pieceColor)
+    if (nextSlotId === null) {
       // Defensive fallback: no matching color found on the whole path (shouldn't happen
       // given the board layout), so don't move the piece anywhere unexpected.
       return piecePosition
     }
+    let result = nextSlotId
     // if next jump lands on, or departs from, this color's special jump slot, jump across the board
     if (nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot) {
-      nextSlotId += 15
-      nextSlotId = ((nextSlotId - 1) % mainPathLength) + 1
+      result += 15
+      result = ((result - 1) % mainPathLength) + 1
+      // after crossing, if the landing spot is itself same-colored, chain one more jump forward
+      if (slotColorMap[result] === pieceColor) {
+        const chained = findNextSameColorSlot(result, pieceColor)
+        if (chained !== null) result = chained
+      }
     }
-    return nextSlotId
+    return result
   }
 
   const calculateFinish = (currPiecePosition, pieceColor, pId, inFinishLane) => {
