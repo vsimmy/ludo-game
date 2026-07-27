@@ -25,7 +25,9 @@ const Board = () => {
   const [piecePositions, setPiecePositions] = useState(initPositions);
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
   const [goHome, setGoHome] = useState(false);
+  const [lastMovedPiece, setLastMovedPiece] = useState(null); // { color, pieceId } — tracks which piece to send home on 3 consecutive sixes
   const [isHovered, setIsHovered] = useState(false);
+  const [winner, setWinner] = useState(null);
 
   const length = 13
   const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
@@ -139,9 +141,10 @@ const Board = () => {
     console.log(currSlot, terminalSlots)
 
     if (goHome === true) {
-      console.log(goHome)
       newPositions[currentColor][pieceId] = null
-      setGoHome(false);
+      setGoHome(false)
+      setPiecePositions(newPositions)
+      return
     }
     // piecePosition on finsih land will have prefix color-
     if (currSlot !== null && currSlot.toString().includes('-')) {
@@ -177,9 +180,15 @@ const Board = () => {
         }
       }
     }
-    console.log(newPositions)
     setPiecePositions(newPositions)
+    setLastMovedPiece({ color: currentColor, pieceId })
 
+    const wonColor = Object.keys(newPositions).find(
+      color => newPositions[color].every(p => p !== null && p.toString() === 'won')
+    )
+    if (wonColor) {
+      setWinner(wonColor)
+    }
   }
 
   const inFinishLane = (pId, currPosition, newPosition) => {
@@ -254,9 +263,22 @@ const Board = () => {
       if (sixRoll < 2) {
         setSixRoll(sixRoll => sixRoll + 1);
       } else {
-        console.log('go home')
-        setGoHome(true)
         setSixRoll(0);
+        // Send home the piece that was moved earlier in this same six-streak.
+        // Guard on color match in case the player rolled again without moving
+        // anything yet (lastMovedPiece could be stale from a prior turn).
+        if (lastMovedPiece && lastMovedPiece.color === currentColor) {
+          setPiecePositions(prev => {
+            const updated = JSON.parse(JSON.stringify(prev))
+            updated[lastMovedPiece.color][lastMovedPiece.pieceId] = null
+            return updated
+          })
+          setLastMovedPiece(null)
+          setHasPieceSelected(false) // this roll is consumed sending the piece home, not for moving
+        } else {
+          // Fallback: nothing moved yet this streak, so apply on whichever piece is clicked next
+          setGoHome(true)
+        }
       }
     } else {
       setSixRoll(0);
@@ -516,6 +538,21 @@ const Board = () => {
     setTimeout(() => setGameStarted(true), 300)
 
   };
+
+  const resetGame = () => {
+    setPiecePositions(initPositions)
+    setRound(0)
+    setCurrentTurnInd(-1)
+    setCurrentRoll(0)
+    setGameLog([])
+    setRoundDisplay('Click to Start the Game')
+    setShowGameLog(false)
+    setSixRoll(0)
+    setHasPieceSelected(false)
+    setGoHome(false)
+    setLastMovedPiece(null)
+    setWinner(null)
+  };
   return (
     <div className="container">
       {!gameStarted && <PlayersConfig toStart={handleStartGame}></PlayersConfig>}
@@ -539,10 +576,11 @@ const Board = () => {
         </div>
         <div className="game-controls">
           <div>
-            <button className="roll-button" onClick={handleRoll}>Roll the Dice</button>
+            <button className="roll-button" onClick={handleRoll} disabled={!!winner}>Roll the Dice</button>
+            {winner && <button className="roll-button" onClick={resetGame}>Play Again</button>}
           </div>
           <div className="display-text">
-            {roundDisplay}
+            {winner ? `🎉 ${winner.toUpperCase()} WINS! 🎉` : roundDisplay}
           </div>
           <>{renderGameStat()}</>
           <>{renderGameLog()}</>
