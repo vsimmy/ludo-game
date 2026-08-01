@@ -384,3 +384,35 @@
     transform: scale(1);
   }
 }
+
+/* ---- Dice ---- */
+.dice-face {
+  display: inline-block;
+  margin: 8px 0;
+}
+
+.dice-body {
+  fill: #ffffff;
+  stroke: #cbd5e1;
+  stroke-width: 2;
+}
+
+.dice-pip {
+  fill: #1e293b;
+}
+
+.dice-rolling svg {
+  animation: dice-tumble 0.16s linear infinite;
+}
+
+@keyframes dice-tumble {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(15deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(-10deg) scale(1);
+  }
+}

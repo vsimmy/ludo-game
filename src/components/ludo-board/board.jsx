@@ -5,6 +5,7 @@ import { ColorsDict } from "../ludo.type.ts";
 import { PieceColor } from "../ludo.type.ts";
 import Piece from "../piece/piece.jsx";
 import PlayersConfig from "../players-config/players-config.jsx"
+import Dice from "../dice/dice.jsx"
 import { useWs } from "../../hooks/ws-hook.jsx"
 
 const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:8080'
@@ -385,10 +386,29 @@ const Board = () => {
       .map(({ idx }) => idx)
   }
 
+  const DICE_ROLL_ANIMATION_MS = 500 // how long the dice appears to tumble before settling
+  const [isRolling, setIsRolling] = useState(false)
+  const [displayRoll, setDisplayRoll] = useState(1)
+  const rollTumbleIntervalRef = useRef(null)
+
   const handleRoll = () => {
+    if (isRolling || !!winner) return
+    setIsRolling(true)
+    rollTumbleIntervalRef.current = setInterval(() => {
+      setDisplayRoll(Math.floor(Math.random() * 6) + 1)
+    }, 80)
+    setTimeout(() => {
+      clearInterval(rollTumbleIntervalRef.current)
+      setIsRolling(false)
+      performRoll()
+    }, DICE_ROLL_ANIMATION_MS)
+  }
+
+  const performRoll = () => {
     const nextTurnInd = Math.max(0, (currentTurnInd + 1 - (sixRoll > 0)) % numPlayers);
     setCurrentTurnInd(nextTurnInd)
     const randomRoll = Math.floor(Math.random() * 6) + 1;
+    setDisplayRoll(randomRoll)
     const newRoundNum = round + 1;
     setHasPieceSelected(true)
     if (randomRoll === 6) {
@@ -714,7 +734,8 @@ const Board = () => {
         </div>
         <div className="game-controls">
           <div>
-            <button className="roll-button" onClick={handleRoll} disabled={!!winner}>Roll the Dice</button>
+            <Dice value={displayRoll} isRolling={isRolling} />
+            <button className="roll-button" onClick={handleRoll} disabled={!!winner || isRolling}>Roll the Dice</button>
             {winner && <button className="roll-button" onClick={resetGame}>Play Again</button>}
           </div>
           <div className="display-text">
