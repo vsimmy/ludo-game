@@ -26,6 +26,12 @@ const Board = () => {
   const [showGameLog, setShowGameLog] = useState(false);
   const [sixRoll, setSixRoll] = useState(0);
   const [piecePositions, setPiecePositions] = useState(initPositions);
+  // Purely visual: mirrors piecePositions but catches up one square at a time so pieces
+  // appear to hop spot-by-spot instead of teleporting straight to the final result.
+  // piecePositions itself updates immediately and stays authoritative for all game logic
+  // (clicks, turn order, win checks) — this is a rendering-only layer.
+  const [animatedPositions, setAnimatedPositions] = useState(initPositions);
+  const animationTimersRef = useRef({});
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
   const [goHome, setGoHome] = useState(false);
   const [lastMovedPiece, setLastMovedPiece] = useState(null); // { color, pieceId } — tracks which piece to send home on 3 consecutive sixes
@@ -85,6 +91,52 @@ const Board = () => {
   ];
 
   const mainPathLength = (length - 1) * numPlayers; // 48 numbered slots around the board
+  const MOVE_STEP_DURATION_MS = 500 // ms per square of animated piece movement — edit to change speed
+
+  // Step animatedPositions toward piecePositions one square at a time whenever the
+  // authoritative state changes. Only meaningful for plain-number-to-plain-number moves
+  // along the shared main path (the common dice-roll case) — leaving home, entering the
+  // private finish lane, and winning aren't representable as "walk N squares forward" so
+  // those snap directly instead of stepping.
+  useEffect(() => {
+    Object.keys(piecePositions).forEach(color => {
+      piecePositions[color].forEach((newPos, idx) => {
+        const key = `${color}-${idx}`
+        const oldPos = animatedPositions[color][idx]
+        if (oldPos === newPos) return
+        if (animationTimersRef.current[key]) {
+          clearTimeout(animationTimersRef.current[key])
+        }
+        const bothNumeric = typeof oldPos === 'number' && typeof newPos === 'number'
+        if (!bothNumeric) {
+          setAnimatedPositions(prev => {
+            const updated = JSON.parse(JSON.stringify(prev))
+            updated[color][idx] = newPos
+            return updated
+          })
+          return
+        }
+        // Walk forward one slot at a time (wrapping around mainPathLength) from oldPos to newPos.
+        const steps = []
+        let cursor = oldPos
+        for (let i = 0; i < mainPathLength; i++) {
+          if (cursor === newPos) break
+          cursor = (cursor % mainPathLength) + 1
+          steps.push(cursor)
+        }
+        steps.forEach((stepPos, i) => {
+          animationTimersRef.current[key] = setTimeout(() => {
+            setAnimatedPositions(prev => {
+              const updated = JSON.parse(JSON.stringify(prev))
+              updated[color][idx] = stepPos
+              return updated
+            })
+          }, MOVE_STEP_DURATION_MS * (i + 1))
+        })
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [piecePositions])
   const FINISH_LANE_LENGTH = 5 // private home-stretch cells per color, gate to center
   const CROSS_BOARD_OFFSET = 15 // slots to add when a piece crosses via its color's special jump slot
   // ^ Both constants are specific to this board's current 13x13 / 4-arm geometry.
@@ -428,7 +480,7 @@ const Board = () => {
   }
 
   const renderPiece = (pieceId, color, position) => {
-    return (<div id={pieceId} key={pieceId} onClick={() => handlePieceSelect(pieceId, color, position)} >
+    return (<div id={pieceId} key={pieceId} className="piece-hop" onClick={() => handlePieceSelect(pieceId, color, position)} >
       <svg xmlns="https://www.w3.org/2000/svg" height='16' width='16' viewBox="0 0 48 56" >
         <path fill={color} d="M 49.5,21.5 C 49.5,23.5 49.5,25.5 49.5,27.5C 48.7109,27.7828 48.0442,28.2828 47.5,29C 41.5,29.3333 35.5,29.6667 29.5,30C 24.9271,35.15 20.5938,40.4833 16.5,46C 14.5273,46.4955 12.5273,46.6621 10.5,46.5C 11.8622,40.7669 13.5289,35.1002 15.5,29.5C 12.4281,29.1826 9.42814,29.5159 6.5,30.5C 5.52679,34.1477 3.19345,35.8143 -0.5,35.5C -0.5,33.1667 -0.5,30.8333 -0.5,28.5C 0.833333,25.8333 0.833333,23.1667 -0.5,20.5C -0.5,18.1667 -0.5,15.8333 -0.5,13.5C 3.19345,13.1857 5.52679,14.8523 6.5,18.5C 9.42814,19.4841 12.4281,19.8174 15.5,19.5C 13.5289,13.8998 11.8622,8.23313 10.5,2.5C 12.5273,2.33788 14.5273,2.50454 16.5,3C 20.5938,8.51671 24.9271,13.85 29.5,19C 35.5,19.3333 41.5,19.6667 47.5,20C 48.0442,20.7172 48.7109,21.2172 49.5,21.5 Z" />
       </svg>
@@ -497,10 +549,11 @@ const Board = () => {
                   style={{ rotate: parsed.rotate, backgroundColor: parsed.color }}
                 >
                   <div className="slot-circle" >
-                    {Object.keys(piecePositions).map(c => (piecePositions[c].map((piecePos, pieceInd) => {
-                      if (String(piecePos) === String(parsed.slotNum) && piecePos !== null) {
+                    {Object.keys(animatedPositions).map(c => (animatedPositions[c].map((animPos, pieceInd) => {
+                      if (String(animPos) === String(parsed.slotNum) && animPos !== null) {
                         const pieceId = `${c}-${pieceInd + 1}`
-                        return renderPiece(pieceId, c, piecePos)
+                        const realPos = piecePositions[c][pieceInd]
+                        return renderPiece(pieceId, c, realPos)
                       } else {
                         return null
                       }
@@ -625,6 +678,7 @@ const Board = () => {
 
   const resetGame = () => {
     setPiecePositions(initPositions)
+    setAnimatedPositions(initPositions)
     setRound(0)
     setCurrentTurnInd(-1)
     setCurrentRoll(0)
