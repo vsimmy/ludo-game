@@ -38,6 +38,39 @@ const Board = () => {
   const [lastMovedPiece, setLastMovedPiece] = useState(null); // { color, pieceId } — tracks which piece to send home on 3 consecutive sixes
   const [isHovered, setIsHovered] = useState(false);
   const [winner, setWinner] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const audioCtxRef = useRef(null)
+
+  const playTone = (freq, durationMs = 150, type = 'triangle') => {
+    if (!soundEnabled) return
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      }
+      const ctx = audioCtxRef.current
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = type
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0.15, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + durationMs / 1000)
+    } catch (e) {
+      // Audio can fail (autoplay restrictions, unsupported browser) — never break gameplay over it.
+    }
+  }
+
+  // Little ascending fanfare when someone wins.
+  useEffect(() => {
+    if (!winner) return
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      setTimeout(() => playTone(freq, 220, 'sine'), i * 140)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winner])
 
   // Multiplayer sync: mirrors full game state to any other connected client via
   // ws-server.js. This is a "shared state broadcast", not an authoritative server —
@@ -396,10 +429,12 @@ const Board = () => {
     setIsRolling(true)
     rollTumbleIntervalRef.current = setInterval(() => {
       setDisplayRoll(Math.floor(Math.random() * 6) + 1)
+      playTone(300, 40, 'square')
     }, 80)
     setTimeout(() => {
       clearInterval(rollTumbleIntervalRef.current)
       setIsRolling(false)
+      playTone(440, 120, 'triangle')
       performRoll()
     }, DICE_ROLL_ANIMATION_MS)
   }
@@ -716,6 +751,22 @@ const Board = () => {
       {!gameStarted && <PlayersConfig toStart={handleStartGame}></PlayersConfig>}
       {gameStarted && (<>
         <div className="board">
+          {winner && (
+            <div className="confetti-container">
+              {Array.from({ length: 60 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="confetti-piece"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    backgroundColor: [ColorsDict.b, ColorsDict.g, ColorsDict.y, ColorsDict.r][i % 4],
+                    animationDelay: `${Math.random() * 1.2}s`,
+                    animationDuration: `${2 + Math.random() * 1.5}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
           <div className="adjacent-stations">
             {renderStartingStation(PieceColor.RED)}
             {renderStartingStation(PieceColor.ORANGE)}
@@ -737,6 +788,9 @@ const Board = () => {
             <Dice value={displayRoll} isRolling={isRolling} />
             <button className="roll-button" onClick={handleRoll} disabled={!!winner || isRolling}>Roll the Dice</button>
             {winner && <button className="roll-button" onClick={resetGame}>Play Again</button>}
+            <button className="toggle-button" onClick={() => setSoundEnabled(s => !s)}>
+              {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+            </button>
           </div>
           <div className="display-text">
             {winner ? `🎉 ${winner.toUpperCase()} WINS! 🎉` : roundDisplay}
