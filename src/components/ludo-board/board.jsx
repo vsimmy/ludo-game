@@ -41,6 +41,19 @@ const Board = () => {
   const isApplyingRemoteRef = useRef(false)
 
   const length = 13
+  // Each cell in the rows below is a slot code string: "type-rotationPercent-color-slotNumber"
+  //   type:     't' triangle (corner/entrance marker), 'r' or 'p' rectangle (ordinary path
+  //             square — 'p' just renders slightly differently), 's' square-finish (private
+  //             lane cell, slotNumber here is "color-N" not a shared number), 'j' jump arrow
+  //             (decorative only, not a real numbered slot), '' empty (outside the board cross)
+  //   rotationPercent: 0/25/50/75, converted to degrees for CSS rotate — controls which way
+  //             corner/arrow graphics point
+  //   color:    single-letter — b=blue, g=green, y=orange, r=red, ''=transparent
+  //   slotNumber: 1-48 for ordinary path cells (shared numbering all the way around the
+  //             board), or omitted for 'j' cells, or "color-N" (1-5) for 's' finish cells
+  // To add more squares: extend a row (or add rows) with correctly-numbered cells following
+  // this scheme, then update mainPathLength/terminalSlots/CROSS_BOARD_OFFSET above to match
+  // the new geometry — those are the only other places board size is assumed.
   const firstRow = ['', '', '', 't-25-b-31', 'r-50-g-32', 'r-50-r-33', 'r-0-y-34', 'r-50-b-35', 'r-50-g-36', 't-50-r-37', '', '', ''];
   const secondRow = ['', '', '', 'r-0-y-30', '', '', 's-0-y-1', '', '', 'r-0-y-38', '', '', ''];
   const thirdRow = ['', '', '', 'r-0-r-29', '', '', 's-0-y-2', '', '', 'r-0-b-39', '', '', ''];
@@ -72,6 +85,13 @@ const Board = () => {
   ];
 
   const mainPathLength = (length - 1) * numPlayers; // 48 numbered slots around the board
+  const FINISH_LANE_LENGTH = 5 // private home-stretch cells per color, gate to center
+  const CROSS_BOARD_OFFSET = 15 // slots to add when a piece crosses via its color's special jump slot
+  // ^ Both constants are specific to this board's current 13x13 / 4-arm geometry.
+  // If you extend the board (longer arms, more/fewer players), these will need
+  // recalculating by hand — they aren't derived from `length`/`numPlayers` because
+  // that derivation isn't verified to generalize. See slot-code format below for how
+  // startBoard's row strings are structured if you're adding squares.
 
   // Broadcast our game state to other connected clients whenever it changes locally.
   useEffect(() => {
@@ -189,7 +209,7 @@ const Board = () => {
 
     // piecePosition on finsih land will have prefix color-
     if (currSlot !== null && currSlot.toString().includes('-')) {
-      const finalValue = convertColorCode(currentColor) + '-' + calculateFinish(currSlot.split('-')[1] * 1, currentColor, pId, true)
+      const finalValue = calculateFinish(currSlot.split('-')[1] * 1, currentColor, true)
       newPositions[currentColor][pieceId] = finalValue
       stackMateIds.forEach(id => { newPositions[currentColor][id] = finalValue })
     } else {
@@ -211,7 +231,7 @@ const Board = () => {
       } else {
         finalValue =
           inFinishLane(pId, currPosition, newPosition)
-            ? calculateFinish(newPosition, currentColor, pId, false) // gets next position within finish lane
+            ? calculateFinish(newPosition, currentColor, false) // gets next position within finish lane
             : (slotColor === currentColor ? calculateJump(newPosition, currentColor) : newPosition) // gets next position, if possible also jumps
         if (!finalValue.toString().includes('-') && finalValue !== null) {
           const piecesToTakeAfterJump = canTakePieces(finalValue)
@@ -255,7 +275,7 @@ const Board = () => {
     let result = nextSlotId
     // if next jump lands on, or departs from, this color's special jump slot, jump across the board
     if (nextSlotId === terminalSlots[pieceColor].jumpSlot || piecePosition === terminalSlots[pieceColor].jumpSlot) {
-      result += 15
+      result += CROSS_BOARD_OFFSET
       result = ((result - 1) % mainPathLength) + 1
       // after crossing, if the landing spot is itself same-colored, chain one more jump forward
       if (slotColorMap[result] === pieceColor) {
@@ -266,24 +286,23 @@ const Board = () => {
     return result
   }
 
-  const calculateFinish = (currPiecePosition, pieceColor, pId, inFinishLane) => {
-    if (inFinishLane) {
-      if ((currPiecePosition + currentRoll) === 5) {
-        return 'won'
+  const calculateFinish = (currentPositionOrSteps, pieceColor, alreadyInLane) => {
+    // Unified so this ALWAYS returns either 'won' or a lane-relative "color-N" string —
+    // never a raw absolute board number. Previously, landing exactly on the gate square
+    // (endSlot) on first entry returned the raw endSlot number instead of a lane string,
+    // which meant the piece silently fell back to ordinary shared-loop movement on its
+    // next turn instead of continuing up its own private lane — the reported bug.
+    const steps = alreadyInLane
+      ? currentPositionOrSteps + currentRoll
+      : currentPositionOrSteps - terminalSlots[pieceColor].endSlot
 
-      } else {
-        const newPiecePosition = currPiecePosition + currentRoll
-        return (newPiecePosition > 5 ? 5 - (newPiecePosition - 5) : newPiecePosition).toString()
-      }
-    } else {
-      if (currPiecePosition * 1 - terminalSlots[pieceColor].endSlot === 5) {
-        return 'won'
-      } else if (currPiecePosition * 1 === terminalSlots[pieceColor].endSlot) {
-        return terminalSlots[pieceColor].endSlot
-      } else {
-        return convertColorCode(pieceColor) + '-' + (currPiecePosition - terminalSlots[pieceColor].endSlot).toString()
-      }
+    if (steps === FINISH_LANE_LENGTH) {
+      return 'won'
     }
+    // Overshoot bounces back from the center — only possible once already in the lane;
+    // a fresh single-die entry can never exceed FINISH_LANE_LENGTH in one move.
+    const finalSteps = steps > FINISH_LANE_LENGTH ? FINISH_LANE_LENGTH - (steps - FINISH_LANE_LENGTH) : steps
+    return convertColorCode(pieceColor) + '-' + finalSteps.toString()
   }
   const convertColorCode = (color) => {
     return Object.keys(ColorsDict).find(c => ColorsDict[c] === color)
