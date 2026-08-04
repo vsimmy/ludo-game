@@ -33,6 +33,14 @@ const Board = () => {
   // (clicks, turn order, win checks) — this is a rendering-only layer.
   const [animatedPositions, setAnimatedPositions] = useState(initPositions);
   const animationTimersRef = useRef({});
+  // Per-move metadata read by the animation effect right after piecePositions updates:
+  // moveWaypointsRef marks pieces that jumped (step to the raw dice-roll landing square,
+  // then disappear/reappear at the true final square, instead of walking the whole gap).
+  // pendingExplosionsRef marks pieces that got taken this move (explode in place after
+  // the attacker visually arrives, then vanish home) instead of instantly snapping to null.
+  const moveWaypointsRef = useRef({});
+  const pendingExplosionsRef = useRef({ keys: [], delayMs: 0 });
+  const [explodingPieces, setExplodingPieces] = useState({});
   const [hasPieceSelected, setHasPieceSelected] = useState(false);
   const [goHome, setGoHome] = useState(false);
   const [lastMovedPiece, setLastMovedPiece] = useState(null); // { color, pieceId } — tracks which piece to send home on 3 consecutive sixes
@@ -126,12 +134,22 @@ const Board = () => {
 
   const mainPathLength = (length - 1) * numPlayers; // 48 numbered slots around the board
   const MOVE_STEP_DURATION_MS = 500 // ms per square of animated piece movement — edit to change speed
+  const JUMP_TRANSITION_MS = 300 // how long a piece stays hidden mid-jump before reappearing
+  const EXPLOSION_DURATION_MS = 400 // how long the taken-piece burst plays before it vanishes home
+  const HIDDEN_SENTINEL = -1 // matches no real slot — used to make a piece briefly disappear mid-jump
 
-  // Step animatedPositions toward piecePositions one square at a time whenever the
-  // authoritative state changes. Only meaningful for plain-number-to-plain-number moves
-  // along the shared main path (the common dice-roll case) — leaving home, entering the
-  // private finish lane, and winning aren't representable as "walk N squares forward" so
-  // those snap directly instead of stepping.
+  const scheduleAnimatedUpdate = (color, idx, value, delay) => {
+    const key = `${color}-${idx}`
+    animationTimersRef.current[key] = setTimeout(() => {
+      setAnimatedPositions(prev => {
+        const updated = JSON.parse(JSON.stringify(prev))
+        updated[color][idx] = value
+        return updated
+      })
+    }, delay)
+  }
+
+  // Step animatedPositions toward piecePositions whenever the authoritative state changes.
   useEffect(() => {
     Object.keys(piecePositions).forEach(color => {
       piecePositions[color].forEach((newPos, idx) => {
@@ -141,6 +159,30 @@ const Board = () => {
         if (animationTimersRef.current[key]) {
           clearTimeout(animationTimersRef.current[key])
         }
+
+        // Taken this move: hold visually in place, explode after the attacker arrives,
+        // then vanish home — instead of instantly snapping to null.
+        if (pendingExplosionsRef.current.keys.includes(key) && newPos === null) {
+          const delay = pendingExplosionsRef.current.delayMs
+          const explodePosition = oldPos
+          animationTimersRef.current[key] = setTimeout(() => {
+            setExplodingPieces(prev => ({ ...prev, [key]: { position: explodePosition, color } }))
+            setTimeout(() => {
+              setExplodingPieces(prev => {
+                const next = { ...prev }
+                delete next[key]
+                return next
+              })
+              setAnimatedPositions(prev => {
+                const updated = JSON.parse(JSON.stringify(prev))
+                updated[color][idx] = null
+                return updated
+              })
+            }, EXPLOSION_DURATION_MS)
+          }, delay)
+          return
+        }
+
         const bothNumeric = typeof oldPos === 'number' && typeof newPos === 'number'
         if (!bothNumeric) {
           setAnimatedPositions(prev => {
@@ -150,23 +192,26 @@ const Board = () => {
           })
           return
         }
-        // Walk forward one slot at a time (wrapping around mainPathLength) from oldPos to newPos.
+
+        // If this move jumped, walk to the raw dice-roll landing square first, then
+        // disappear/reappear for the jump portion instead of walking the whole gap.
+        const waypoint = moveWaypointsRef.current[key]
+        const stepTarget = (waypoint !== undefined && waypoint !== newPos) ? waypoint : newPos
+
         const steps = []
         let cursor = oldPos
         for (let i = 0; i < mainPathLength; i++) {
-          if (cursor === newPos) break
+          if (cursor === stepTarget) break
           cursor = (cursor % mainPathLength) + 1
           steps.push(cursor)
         }
-        steps.forEach((stepPos, i) => {
-          animationTimersRef.current[key] = setTimeout(() => {
-            setAnimatedPositions(prev => {
-              const updated = JSON.parse(JSON.stringify(prev))
-              updated[color][idx] = stepPos
-              return updated
-            })
-          }, MOVE_STEP_DURATION_MS * (i + 1))
-        })
+        steps.forEach((stepPos, i) => scheduleAnimatedUpdate(color, idx, stepPos, MOVE_STEP_DURATION_MS * (i + 1)))
+
+        if (stepTarget !== newPos) {
+          const baseDelay = steps.length * MOVE_STEP_DURATION_MS
+          scheduleAnimatedUpdate(color, idx, HIDDEN_SENTINEL, baseDelay + 60)
+          scheduleAnimatedUpdate(color, idx, newPos, baseDelay + 60 + JUMP_TRANSITION_MS)
+        }
       })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -281,6 +326,8 @@ const Board = () => {
     const newPositions = JSON.parse(JSON.stringify(piecePositions)) // create deep copy
     let pieceId = pId.split('-')[1] - 1
     let currSlot = piecePositions[currentColor][pieceId]
+    moveWaypointsRef.current = {}
+    pendingExplosionsRef.current = { keys: [], delayMs: 0 }
 
     if (goHome === true) {
       newPositions[currentColor][pieceId] = null
@@ -292,6 +339,7 @@ const Board = () => {
     // Other pieces of this color stacked on the same spot as the one being moved —
     // they move (and are taken) together with it from here on.
     const stackMateIds = getStackMates(currentColor, currPosition, pieceId)
+    const movingKeys = [pieceId, ...stackMateIds].map(id => `${currentColor}-${id}`)
 
     // piecePosition on finsih land will have prefix color-
     if (currSlot !== null && currSlot.toString().includes('-')) {
@@ -314,14 +362,28 @@ const Board = () => {
       if (piecesToTake.length > 0 && currPosition !== terminalSlots[currentColor].endSlot && !inFinishLane(pId, currPosition, newPosition)) {
         finalValue = newPosition
         piecesToTake.forEach(({ color, pieceIndex }) => { newPositions[color][pieceIndex] = null })
+        pendingExplosionsRef.current = {
+          keys: piecesToTake.map(({ color, pieceIndex }) => `${color}-${pieceIndex}`),
+          delayMs: roll * MOVE_STEP_DURATION_MS + 60
+        }
       } else {
         finalValue =
           inFinishLane(pId, currPosition, newPosition)
             ? calculateFinish(newPosition, currentColor, false) // gets next position within finish lane
             : (slotColor === currentColor ? calculateJump(newPosition, currentColor) : newPosition) // gets next position, if possible also jumps
+        const jumped = typeof finalValue === 'number' && finalValue !== newPosition
+        if (jumped) {
+          movingKeys.forEach(key => { moveWaypointsRef.current[key] = newPosition })
+        }
         if (!finalValue.toString().includes('-') && finalValue !== null) {
           const piecesToTakeAfterJump = canTakePieces(finalValue)
           piecesToTakeAfterJump.forEach(({ color, pieceIndex }) => { newPositions[color][pieceIndex] = null })
+          if (piecesToTakeAfterJump.length > 0) {
+            pendingExplosionsRef.current = {
+              keys: piecesToTakeAfterJump.map(({ color, pieceIndex }) => `${color}-${pieceIndex}`),
+              delayMs: roll * MOVE_STEP_DURATION_MS + (jumped ? 60 + JUMP_TRANSITION_MS : 0) + 60
+            }
+          }
         }
       }
       newPositions[currentColor][pieceId] = finalValue
@@ -618,6 +680,11 @@ const Board = () => {
                         return null
                       }
                     })))}
+                    {Object.entries(explodingPieces).map(([key, info]) => (
+                      String(info.position) === String(parsed.slotNum)
+                        ? <div key={key} className="piece-explosion" style={{ backgroundColor: info.color }} />
+                        : null
+                    ))}
                   </div>
                 </div>
               })()}
@@ -737,6 +804,11 @@ const Board = () => {
   };
 
   const resetGame = () => {
+    Object.values(animationTimersRef.current).forEach(timer => clearTimeout(timer))
+    animationTimersRef.current = {}
+    moveWaypointsRef.current = {}
+    pendingExplosionsRef.current = { keys: [], delayMs: 0 }
+    setExplodingPieces({})
     setPiecePositions(initPositions)
     setAnimatedPositions(initPositions)
     setRound(0)

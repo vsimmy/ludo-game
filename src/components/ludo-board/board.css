@@ -308,8 +308,7 @@
   width: var(--square-width);
   border: 1px solid var(--tile-border);
   border-radius: var(--tile-radius);
-  background: linear-gradient(135deg, #fef9f4, #fdf1e6);
-  box-shadow: var(--tile-shadow);
+  box-shadow: var(--tile-shadow), inset 0 0 0 100px rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -447,5 +446,26 @@
   100% {
     transform: translateY(90vh) rotate(360deg);
     opacity: 0.7;
+  }
+}
+
+/* ---- Take explosion ---- */
+.piece-explosion {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  animation: piece-explode 0.4s ease-out forwards;
+}
+
+@keyframes piece-explode {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+    box-shadow: 0 0 0 10px transparent;
   }
 }
