@@ -299,14 +299,14 @@ const Board = () => {
       newPositions[currentColor][pieceId] = finalValue
       stackMateIds.forEach(id => { newPositions[currentColor][id] = finalValue })
     } else {
-      currSlot += roll
-      const colorShift = (currPosition === 0) * terminalSlots[currentColor].startSlot
-      const maxSlot = (length - 1) * numPlayers
-      // new position from roll
+      const maxSlot = mainPathLength
+      // new position from roll — leaving home now lands directly on this color's own
+      // real entrance slot (the closest board square to its starting space), not a
+      // shared placeholder value every color used to alias on.
       const newPosition =
         currPosition === null ?
-          (roll % 2 === 0 ? 0 : null)
-          : Math.min((currSlot % (maxSlot) === 0 ? maxSlot : currSlot % maxSlot), currSlot) + colorShift
+          (roll % 2 === 0 ? terminalSlots[currentColor].startSlot + 1 : null)
+          : ((currPosition - 1 + roll) % maxSlot) + 1
       // jump or finish lane
       const slotColor = slotColorMap[newPosition]
       const piecesToTake = canTakePieces(newPosition)
@@ -340,7 +340,7 @@ const Board = () => {
 
   const inFinishLane = (pId, currPosition, newPosition) => {
     return currPosition === terminalSlots[currentColor].endSlot ||
-      (currPosition !== 0 && currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
+      (currPosition < terminalSlots[currentColor].endSlot && newPosition >= terminalSlots[currentColor].endSlot) // coming move goes to finish lane
   }
   const findNextSameColorSlot = (fromSlot, pieceColor) => {
     let slotId = fromSlot
@@ -394,14 +394,19 @@ const Board = () => {
     return Object.keys(ColorsDict).find(c => ColorsDict[c] === color)
   }
 
+  const entranceSlots = new Set(Object.values(terminalSlots).map(t => t.startSlot + 1))
+
   const canTakePieces = (targetPosition) => {
     // Returns every opposing piece sitting on targetPosition (could be more than
     // one if the opponent has stacked their own-color pieces together there).
+    // Entrance slots (each color's real starting square) are safe, matching
+    // standard Ludo rules — no captures on any starting square.
+    if (entranceSlots.has(targetPosition)) return []
     const taken = []
     for (const [color, positions] of Object.entries(piecePositions)) {
       if (color === currentColor) continue
       positions.forEach((pos, i) => {
-        if (pos === targetPosition && pos !== null && pos !== 0) {
+        if (pos === targetPosition && pos !== null) {
           taken.push({ color, pieceIndex: i })
         }
       })
