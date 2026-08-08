@@ -861,7 +861,7 @@ const Board = () => {
           </div>
         </div>
         <div className="game-controls">
-          <div>
+          <div className="game-controls-buttons">
             <Dice value={displayRoll} isRolling={isRolling} />
             <button className="roll-button" onClick={handleRoll} disabled={!!winner || isRolling}>Roll the Dice</button>
             {winner && <button className="roll-button" onClick={resetGame}>Play Again</button>}
